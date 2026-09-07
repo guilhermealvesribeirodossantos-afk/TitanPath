@@ -1,3 +1,4 @@
+
 /* =========================================================
    TITANPATH - STYLE.CSS
    Visual: Dark Premium + Dourado + Azul/Roxo
@@ -425,10 +426,6 @@ a {
   margin-bottom: 16px;
 }
 
-/* =========================================================
-   ACCOUNT SUMMARY
-========================================================= */
-
 .account-summary {
   padding: 22px;
 }
@@ -534,10 +531,6 @@ a {
   background: rgba(255, 211, 106, 0.12);
 }
 
-/* =========================================================
-   QUICK STATS
-========================================================= */
-
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -586,10 +579,6 @@ a {
   height: 100%;
   background: linear-gradient(90deg, var(--green), var(--blue));
 }
-
-/* =========================================================
-   MISSION PANEL
-========================================================= */
 
 .mission-panel {
   display: grid;
@@ -650,6 +639,7 @@ a {
   color: #191207;
   font-weight: 900;
   box-shadow: 0 10px 22px rgba(244, 185, 66, 0.22);
+  transition: .2s ease;
 }
 
 .primary-button:hover {
@@ -731,10 +721,6 @@ a {
   accent-color: var(--green);
 }
 
-/* =========================================================
-   MODULES
-========================================================= */
-
 .modules-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -783,10 +769,6 @@ a {
   font-size: 12px;
   line-height: 1.4;
 }
-
-/* =========================================================
-   SECONDARY GRID
-========================================================= */
 
 .secondary-grid {
   display: grid;
@@ -871,10 +853,6 @@ a {
   font-size: 11px;
 }
 
-/* =========================================================
-   GOLD PLANNER
-========================================================= */
-
 .gold-total {
   margin-top: 16px;
   padding: 16px;
@@ -927,10 +905,6 @@ a {
   background: var(--gold);
 }
 
-/* =========================================================
-   TIPS
-========================================================= */
-
 .tips-list {
   list-style: none;
   margin-top: 14px;
@@ -955,10 +929,6 @@ a {
   font-size: 20px;
   line-height: 1;
 }
-
-/* =========================================================
-   EVOLUTION
-========================================================= */
 
 .evolution-panel,
 .goals-panel {
@@ -1005,10 +975,6 @@ a {
   color: var(--text-muted);
   font-weight: 900;
 }
-
-/* =========================================================
-   GOALS
-========================================================= */
 
 .goal-list {
   display: grid;
@@ -1068,6 +1034,286 @@ a {
 }
 
 /* =========================================================
+   MINHA LOJA v0.2
+========================================================= */
+
+.shop-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px;
+  margin-bottom: 16px;
+  border-color: var(--border-gold);
+  background:
+    radial-gradient(circle at top right, rgba(244,185,66,.12), transparent 35%),
+    radial-gradient(circle at bottom left, rgba(42,167,255,.08), transparent 35%),
+    linear-gradient(135deg, #0c121a, #0a0e14);
+}
+
+.shop-hero h2 {
+  margin-top: 6px;
+  font-size: clamp(26px, 4vw, 40px);
+}
+
+.shop-hero p {
+  margin-top: 8px;
+  max-width: 760px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+.shop-hero .primary-button {
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+
+.shop-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.shop-summary-card {
+  position: relative;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.shop-summary-card::after {
+  content: "";
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  right: -28px;
+  top: -28px;
+  background: radial-gradient(circle, rgba(244,185,66,.11), transparent 70%);
+}
+
+.shop-summary-card > span {
+  display: block;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.shop-summary-card > strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 28px;
+  color: var(--text);
+}
+
+.shop-summary-card > small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.shop-slots-panel {
+  padding: 20px;
+  margin-bottom: 22px;
+}
+
+.shop-slots-panel .panel-heading h3 {
+  margin-top: 3px;
+  font-size: 20px;
+}
+
+.shop-slot-counter {
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+.shop-slot-counter strong {
+  color: var(--gold-strong);
+  font-size: 24px;
+}
+
+.shop-space-progress {
+  margin-top: 16px;
+  height: 12px;
+}
+
+.shop-slot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.shop-slot-legend span {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.shop-slot-legend strong {
+  color: var(--text);
+}
+
+.shop-section {
+  margin-bottom: 22px;
+}
+
+.shop-section-heading {
+  margin-bottom: 12px;
+}
+
+.shop-section-heading h3 {
+  margin-top: 4px;
+  font-size: 22px;
+}
+
+.shop-section-note {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.furniture-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.furniture-card {
+  position: relative;
+  min-height: 155px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  transition: .2s ease;
+}
+
+.furniture-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-gold);
+}
+
+.furniture-card::after {
+  content: "";
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  right: -50px;
+  bottom: -60px;
+  background: radial-gradient(circle, rgba(42,167,255,.08), transparent 70%);
+}
+
+.furniture-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 23px;
+  background:
+    linear-gradient(135deg, rgba(244,185,66,.12), rgba(42,167,255,.06)),
+    var(--panel-2);
+  border: 1px solid var(--border);
+}
+
+.furniture-info {
+  margin-top: 14px;
+}
+
+.furniture-info span,
+.furniture-info strong,
+.furniture-info small {
+  display: block;
+}
+
+.furniture-info span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.furniture-info strong {
+  margin-top: 4px;
+  font-size: 17px;
+}
+
+.furniture-info small {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.priority-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.priority-badge.high {
+  color: #ffe7a8;
+  background: rgba(244,185,66,.13);
+  border: 1px solid rgba(244,185,66,.3);
+}
+
+.priority-badge.medium {
+  color: #aaddff;
+  background: rgba(42,167,255,.10);
+  border: 1px solid rgba(42,167,255,.24);
+}
+
+.priority-badge.low {
+  color: #b9c2ce;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+}
+
+.shop-advisor {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 22px;
+  margin-top: 4px;
+  border-color: rgba(123,97,255,.25);
+  background:
+    radial-gradient(circle at top right, rgba(123,97,255,.12), transparent 35%),
+    linear-gradient(135deg, #0e121b, #0a0e14);
+}
+
+.shop-advisor-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(123,97,255,.18), rgba(42,167,255,.12));
+  border: 1px solid rgba(123,97,255,.25);
+  font-size: 27px;
+}
+
+.shop-advisor h3 {
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.shop-advisor p {
+  margin-top: 8px;
+  max-width: 950px;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+/* =========================================================
    PLACEHOLDER PAGES
 ========================================================= */
 
@@ -1122,6 +1368,14 @@ a {
   .secondary-grid .panel:last-child {
     grid-column: 1 / -1;
   }
+
+  .shop-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .furniture-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* =========================================================
@@ -1175,6 +1429,10 @@ a {
 
   .secondary-grid .panel:last-child {
     grid-column: auto;
+  }
+
+  .shop-hero {
+    align-items: flex-start;
   }
 }
 
@@ -1327,6 +1585,78 @@ a {
   .mobile-nav-item.active {
     color: var(--gold);
   }
+
+  .shop-hero {
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+  }
+
+  .shop-hero .primary-button {
+    width: 100%;
+  }
+
+  .shop-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .shop-summary-card {
+    padding: 14px;
+  }
+
+  .shop-summary-card > strong {
+    font-size: 23px;
+  }
+
+  .shop-slots-panel {
+    padding: 16px;
+  }
+
+  .shop-slots-panel .panel-heading {
+    align-items: flex-end;
+  }
+
+  .shop-slot-legend {
+    gap: 7px;
+  }
+
+  .shop-slot-legend span {
+    font-size: 11px;
+  }
+
+  .shop-section-heading {
+    align-items: flex-end;
+  }
+
+  .shop-section-note {
+    max-width: 130px;
+    text-align: right;
+  }
+
+  .furniture-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .furniture-card {
+    min-height: 145px;
+    padding: 13px;
+  }
+
+  .furniture-info strong {
+    font-size: 15px;
+  }
+
+  .priority-badge {
+    top: 11px;
+    right: 11px;
+  }
+
+  .shop-advisor {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
 }
 
 /* =========================================================
@@ -1349,5 +1679,17 @@ a {
 
   .stat-card strong {
     font-size: 18px;
+  }
+
+  .shop-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .furniture-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-section-note {
+    display: none;
   }
 }
