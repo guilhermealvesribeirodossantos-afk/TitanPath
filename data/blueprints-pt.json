@@ -1,0 +1,297 @@
+{
+  "schemaVersion": "0.3.2",
+  "locale": "pt-BR",
+  "catalogStatus": "partial_verified_seed",
+  "source": {
+    "officialSpreadsheet": "https://playshoptitans.com/spreadsheet",
+    "spreadsheetClientVersion": "v26.8.1",
+    "notes": "Catálogo inicial verificado para estruturar busca/autocomplete. Será expandido antes de ser considerado completo."
+  },
+  "resourceCatalog": [
+    "Madeira",
+    "Ferro",
+    "Couro",
+    "Ervas",
+    "Aço",
+    "Madeira de Ferro",
+    "Tecido",
+    "Óleo",
+    "Joias",
+    "Éter",
+    "Essência",
+    "Poeira Estelar"
+  ],
+  "blueprints": [
+    {
+      "id": "shoprbow",
+      "namePt": "Arco de Titã",
+      "categoryPt": "Arco",
+      "tier": null,
+      "value": 11500000,
+      "craftTimeMinutes": 3190,
+      "merchantXp": 305000,
+      "workerXp": 4575,
+      "resources": [
+        {
+          "name": "Ferro",
+          "amount": 415
+        },
+        {
+          "name": "Éter",
+          "amount": 40
+        },
+        {
+          "name": "Essência",
+          "amount": 8
+        }
+      ],
+      "components": [
+        {
+          "name": "Pluma de Semideus",
+          "amount": 4
+        },
+        {
+          "name": "Garra Cruel",
+          "amount": 2
+        }
+      ],
+      "workers": [
+        {
+          "name": "Carpinteiro",
+          "level": 36
+        },
+        {
+          "name": "Mestre",
+          "level": 32
+        },
+        {
+          "name": "Ferreiro",
+          "level": 29
+        }
+      ],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/wb/shoprbow"
+    },
+    {
+      "id": "scrolloflevitation",
+      "namePt": "Tabela do baguá",
+      "categoryPt": "Feitiço",
+      "tier": 7,
+      "value": 71000,
+      "craftTimeMinutes": 100,
+      "merchantXp": 24500,
+      "workerXp": 368,
+      "resources": [
+        {
+          "name": "Ervas",
+          "amount": 141
+        },
+        {
+          "name": "Couro",
+          "amount": 70
+        },
+        {
+          "name": "Óleo",
+          "amount": 36
+        }
+      ],
+      "components": [
+        {
+          "name": "Pergaminho de tempestades",
+          "amount": 1
+        },
+        {
+          "name": "Olho maligno",
+          "amount": 4
+        }
+      ],
+      "workers": [
+        {
+          "name": "Feiticeiro",
+          "level": 17
+        },
+        {
+          "name": "Herborista",
+          "level": 13
+        }
+      ],
+      "energy": {
+        "surcharge": 425,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/accessories/us/scrolloflevitation"
+    },
+    {
+      "id": "voidling",
+      "namePt": "Vaco-vaco",
+      "categoryPt": "Familiar",
+      "tier": 13,
+      "value": 7350000,
+      "craftTimeMinutes": 2380,
+      "merchantXp": 410000,
+      "workerXp": 6150,
+      "resources": [
+        {
+          "name": "Ervas",
+          "amount": 548
+        },
+        {
+          "name": "Joias",
+          "amount": 42
+        },
+        {
+          "name": "Essência",
+          "amount": 6
+        }
+      ],
+      "components": [
+        {
+          "name": "Garra Interdimensional",
+          "amount": 2
+        },
+        {
+          "name": "Olho Que Tudo Vê",
+          "amount": 1
+        }
+      ],
+      "workers": [
+        {
+          "name": "Invocador",
+          "level": 32
+        },
+        {
+          "name": "Feiticeiro",
+          "level": 28
+        },
+        {
+          "name": "Sacerdotisa",
+          "level": 25
+        }
+      ],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/accessories/xf/voidling"
+    },
+    {
+      "id": "t14quiver",
+      "namePt": "Aljava do Avatar",
+      "categoryPt": "Aljava",
+      "tier": 14,
+      "value": 11500000,
+      "craftTimeMinutes": 3340,
+      "merchantXp": 335000,
+      "workerXp": 8543,
+      "resources": [
+        {
+          "name": "Couro",
+          "amount": 462
+        },
+        {
+          "name": "Tecido",
+          "amount": 124
+        },
+        {
+          "name": "Essência",
+          "amount": 8
+        }
+      ],
+      "components": [
+        {
+          "name": "Pluma de Semideus",
+          "amount": 2
+        },
+        {
+          "name": "Brasão dos Céus",
+          "amount": 2
+        }
+      ],
+      "workers": [
+        {
+          "name": "Veterano",
+          "level": 36
+        },
+        {
+          "name": "Alfaiate",
+          "level": 32
+        },
+        {
+          "name": "Mestre",
+          "level": 29
+        }
+      ],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/accessories/xq/t14quiver"
+    },
+    {
+      "id": "t16cloak",
+      "namePt": "Galaxica Envolta",
+      "categoryPt": "Manto",
+      "tier": 16,
+      "value": 38500000,
+      "craftTimeMinutes": 7750,
+      "merchantXp": 520000,
+      "workerXp": 7800,
+      "resources": [
+        {
+          "name": "Couro",
+          "amount": 550
+        },
+        {
+          "name": "Tecido",
+          "amount": 199
+        },
+        {
+          "name": "Poeira Estelar",
+          "amount": 13
+        }
+      ],
+      "components": [
+        {
+          "name": "Olho de Xzyur",
+          "amount": 3
+        },
+        {
+          "name": "Nexo da Asa",
+          "amount": 4
+        }
+      ],
+      "workers": [
+        {
+          "name": "Invocador",
+          "level": 39
+        },
+        {
+          "name": "Alfaiate",
+          "level": 35
+        },
+        {
+          "name": "Feiticeiro",
+          "level": 32
+        }
+      ],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/accessories/xc/t16cloak"
+    }
+  ]
+}
