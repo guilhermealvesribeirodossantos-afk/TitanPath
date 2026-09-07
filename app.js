@@ -1,6 +1,6 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.2.2
-   Loja individualizada + energia por rack + capacidades por bin
+   TITANPATH - APP.JS v0.5.0
+   Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1120,6 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
     strategy: "fast-growth",
     sort: "advisor",
     filter: "all",
+    resourcesUpdatedAt: null,
     resources: {
       "Madeira": 0,
       "Ferro": 0,
@@ -1246,21 +1247,50 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function projectResourcesTotal(project) {
-    const r = project.resources || {};
-    return (
-      Number(r.wood || 0) +
-      Number(r.iron || 0) +
-      Number(r.leather || 0) +
-      Number(r.herbs || 0)
-    );
+    return Object.values(project.resources || {})
+      .reduce((sum, amount) => sum + Number(amount || 0), 0);
   }
 
-  function canCraft(project) {
+  function queuedReservedResources() {
+    const reserved = {};
+
+    crafting.queue.forEach(projectId => {
+      if (!projectId) return;
+      const queuedProject = projectById(projectId);
+      if (!queuedProject) return;
+
+      Object.entries(queuedProject.resources || {}).forEach(([resource, amount]) => {
+        reserved[resource] = Number(reserved[resource] || 0) + Number(amount || 0);
+      });
+    });
+
+    return reserved;
+  }
+
+  function effectiveResources() {
+    const reserved = queuedReservedResources();
+    const available = {};
+
+    Object.entries(crafting.resources || {}).forEach(([resource, amount]) => {
+      available[resource] = Math.max(
+        0,
+        Number(amount || 0) - Number(reserved[resource] || 0)
+      );
+    });
+
+    return available;
+  }
+
+  function canCraftWithResources(project, resources) {
     const req = project.resources || {};
 
     return Object.entries(req).every(([resource, amount]) => {
-      return Number(crafting.resources[resource] || 0) >= Number(amount || 0);
+      return Number(resources[resource] || 0) >= Number(amount || 0);
     });
+  }
+
+  function canCraft(project) {
+    return canCraftWithResources(project, effectiveResources());
   }
 
   function normalize(value, min, max) {
@@ -1362,6 +1392,254 @@ document.addEventListener("DOMContentLoaded", () => {
     return crafting.projects.find(p => p.id === id) || null;
   }
 
+  const BASIC_BIN_CAPACITY = {
+    1: 35, 2: 41, 3: 47, 4: 53, 5: 59,
+    6: 65, 7: 77, 8: 89, 9: 101, 10: 113,
+    11: 125, 12: 145, 13: 165, 14: 185, 15: 205
+  };
+
+  const SHOP_BIN_RESOURCE_MAP = {
+    wood: "Madeira",
+    iron: "Ferro",
+    leather: "Couro",
+    herbs: "Ervas"
+  };
+
+  function loadCurrentShopForAdvisor() {
+    try {
+      return JSON.parse(localStorage.getItem("titanpath_shop") || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  function shopResourceCapacities() {
+    const currentShop = loadCurrentShopForAdvisor();
+    const capacities = {};
+
+    if (!currentShop?.bins) return capacities;
+
+    Object.entries(SHOP_BIN_RESOURCE_MAP).forEach(([shopKey, resourceName]) => {
+      const items = currentShop.bins?.[shopKey]?.items || [];
+
+      capacities[resourceName] = items.reduce(
+        (sum, item) => sum + Number(BASIC_BIN_CAPACITY[Number(item.level)] || 0),
+        0
+      );
+    });
+
+    return capacities;
+  }
+
+  function lowestBasicBinForResource(resourceName) {
+    const currentShop = loadCurrentShopForAdvisor();
+    if (!currentShop?.bins) return null;
+
+    const entry = Object.entries(SHOP_BIN_RESOURCE_MAP)
+      .find(([, mappedResource]) => mappedResource === resourceName);
+
+    if (!entry) return null;
+
+    const [shopKey] = entry;
+    const items = currentShop.bins?.[shopKey]?.items || [];
+    if (!items.length) return null;
+
+    let best = null;
+
+    items.forEach((item, index) => {
+      const level = Number(item.level || 1);
+
+      if (!best || level < best.level) {
+        best = {
+          resource: resourceName,
+          index: index + 1,
+          level,
+          currentCapacity: Number(BASIC_BIN_CAPACITY[level] || 0),
+          nextCapacity: Number(BASIC_BIN_CAPACITY[level + 1] || 0)
+        };
+      }
+    });
+
+    return best;
+  }
+
+  function consumeFromResourceSnapshot(resources, project) {
+    Object.entries(project.resources || {}).forEach(([resource, amount]) => {
+      resources[resource] = Math.max(
+        0,
+        Number(resources[resource] || 0) - Number(amount || 0)
+      );
+    });
+  }
+
+  function buildSmartSlotPlan() {
+    const freeIndexes = crafting.queue
+      .map((projectId, index) => projectId ? null : index)
+      .filter(index => index !== null);
+
+    const resources = { ...effectiveResources() };
+    const ranked = getRankedProjects();
+    const plan = [];
+
+    freeIndexes.forEach(slotIndex => {
+      const candidate = ranked.find(project =>
+        canCraftWithResources(project, resources)
+      );
+
+      if (!candidate) return;
+
+      plan.push({
+        slotIndex,
+        project: candidate
+      });
+
+      consumeFromResourceSnapshot(resources, candidate);
+    });
+
+    return {
+      plan,
+      resourcesAfter: resources,
+      freeSlots: freeIndexes.length
+    };
+  }
+
+  function detectAdvisorBottleneck() {
+    const ranked = getRankedProjects();
+    if (!ranked.length) return null;
+
+    const target = ranked[0];
+    const available = effectiveResources();
+    const capacities = shopResourceCapacities();
+
+    const shortages = Object.entries(target.resources || {})
+      .map(([resource, amount]) => ({
+        resource,
+        required: Number(amount || 0),
+        available: Number(available[resource] || 0),
+        capacity: capacities[resource] ?? null
+      }))
+      .filter(item => item.available < item.required)
+      .sort((a, b) =>
+        (b.required - b.available) - (a.required - a.available)
+      );
+
+    if (shortages.length) {
+      const bottleneck = shortages[0];
+      const bin = lowestBasicBinForResource(bottleneck.resource);
+
+      return {
+        type: "shortage",
+        ...bottleneck,
+        bin
+      };
+    }
+
+    const freeSlots = freeCraftingSlots();
+    if (freeSlots > 0) {
+      const plan = buildSmartSlotPlan();
+
+      if (plan.plan.length < freeSlots) {
+        const demand = {};
+
+        plan.plan.forEach(({ project }) => {
+          Object.entries(project.resources || {}).forEach(([resource, amount]) => {
+            demand[resource] = Number(demand[resource] || 0) + Number(amount || 0);
+          });
+        });
+
+        const stressed = Object.entries(demand)
+          .map(([resource, amount]) => ({
+            resource,
+            amount,
+            available: Number(effectiveResources()[resource] || 0),
+            capacity: capacities[resource] ?? null
+          }))
+          .sort((a, b) =>
+            (b.amount / Math.max(1, b.available)) -
+            (a.amount / Math.max(1, a.available))
+          )[0];
+
+        if (stressed) {
+          return {
+            type: "slot-pressure",
+            ...stressed,
+            bin: lowestBasicBinForResource(stressed.resource)
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function smartGrowthDiagnosis() {
+    const ranked = getRankedProjects();
+    if (!ranked.length) {
+      return {
+        level: "setup",
+        title: "Cadastre os projetos que você desbloqueou",
+        text: "O catálogo possui todos os projetos, mas o Advisor só deve recomendar o que sua conta realmente consegue fabricar."
+      };
+    }
+
+    const plan = buildSmartSlotPlan();
+    const bottleneck = detectAdvisorBottleneck();
+
+    if (!plan.plan.length && freeCraftingSlots() > 0) {
+      if (bottleneck?.type === "shortage") {
+        return {
+          level: "warning",
+          title: `${bottleneck.resource} está travando sua fabricação`,
+          text: `O melhor projeto atual precisa de ${fmt(bottleneck.required)} de ${bottleneck.resource}, mas você tem ${fmt(bottleneck.available)} disponível para novos crafts.`
+        };
+      }
+
+      return {
+        level: "warning",
+        title: "Slots livres sem projeto fabricável",
+        text: "Atualize seus recursos ou cadastre outros projetos desbloqueados para evitar deixar slots parados."
+      };
+    }
+
+    if (freeCraftingSlots() === 0) {
+      return {
+        level: "good",
+        title: "Todos os slots estão trabalhando",
+        text: "Seu próximo foco é concluir a fila, atualizar os recursos e repetir a recomendação do Advisor."
+      };
+    }
+
+    if (plan.plan.length < freeCraftingSlots()) {
+      return {
+        level: "warning",
+        title: "Você não consegue alimentar todos os slots",
+        text: `O Advisor consegue preencher ${plan.plan.length} de ${freeCraftingSlots()} slots livres com os recursos registrados.`
+      };
+    }
+
+    return {
+      level: "good",
+      title: "Sua fabricação está pronta para crescer",
+      text: `O Advisor encontrou um plano para preencher os ${freeCraftingSlots()} slots livres com base no modo ${strategyLabel()}.`
+    };
+  }
+
+  function resourceFreshnessText() {
+    if (!crafting.resourcesUpdatedAt) {
+      return "Recursos ainda não foram atualizados nesta versão.";
+    }
+
+    const minutes = Math.floor((Date.now() - Number(crafting.resourcesUpdatedAt)) / 60000);
+
+    if (minutes < 60) return `Recursos atualizados há ${Math.max(1, minutes)} min.`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Recursos atualizados há ${hours} h.`;
+
+    const days = Math.floor(hours / 24);
+    return `Recursos atualizados há ${days} dia${days === 1 ? "" : "s"}.`;
+  }
+
   function updateCraftingUI() {
     syncQueueLength();
 
@@ -1386,6 +1664,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCraftingSlots();
     renderBlueprints();
     renderCraftingAdvisor();
+    renderSmartResourceStatus();
   }
 
   function renderCraftingSlots() {
@@ -1687,15 +1966,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const recommendation = document.getElementById("craftingRecommendation");
 
     if (!ranked.length) {
-      if (priority) priority.textContent = "AGUARDANDO";
+      if (priority) priority.textContent = "CONFIGURAR";
 
       if (recommendation) {
         recommendation.innerHTML = `
-          <div class="crafting-recommendation-icon">⚙️</div>
+          <div class="crafting-recommendation-icon">🧠</div>
           <div>
             <span>PRÓXIMA AÇÃO</span>
-            <h4>Cadastre seus projetos desbloqueados</h4>
-            <p>Depois disso, o TitanPath poderá comparar automaticamente XP/min, ouro/min, recursos disponíveis e estoque.</p>
+            <h4>Cadastre os projetos que você já desbloqueou</h4>
+            <p>
+              O catálogo completo está carregado, mas o TitanPath precisa saber quais projetos pertencem à sua conta antes de recomendar uma rota de fabricação.
+            </p>
           </div>
         `;
       }
@@ -1704,22 +1985,88 @@ document.addEventListener("DOMContentLoaded", () => {
       setCraftText("bestGoldPerMin", "—");
       setCraftText("bestBalancedItem", "—");
       setCraftText("worstCraftItem", "—");
+
+      renderAdvisorExtension();
       return;
     }
 
     const best = ranked[0];
+    const planData = buildSmartSlotPlan();
+    const bottleneck = detectAdvisorBottleneck();
+    const diagnosis = smartGrowthDiagnosis();
 
-    if (priority) priority.textContent = best.craftable ? "FABRIQUE AGORA" : "FALTA RECURSO";
+    if (priority) {
+      priority.textContent =
+        best.craftable ? "PLANO PRONTO" :
+        bottleneck ? "CORRIGIR GARGALO" :
+        "REVISAR RECURSOS";
+    }
+
+    let mainTitle = best.craftable
+      ? `Priorize ${escapeHtml(best.name)}`
+      : `Prepare recursos para ${escapeHtml(best.name)}`;
+
+    let mainText = advisorReason(best);
+
+    if (planData.plan.length) {
+      const planNames = planData.plan
+        .map(({ project }) => escapeHtml(project.name))
+        .join(" → ");
+
+      mainText += ` Plano dos slots livres: ${planNames}.`;
+    }
 
     if (recommendation) {
       recommendation.innerHTML = `
         <div class="crafting-recommendation-icon">${best.icon || "⚒️"}</div>
-        <div>
+
+        <div class="tp-smart-advisor-copy">
           <span>PRÓXIMA AÇÃO</span>
-          <h4>${best.craftable ? `Fabrique ${escapeHtml(best.name)}` : `Prepare recursos para ${escapeHtml(best.name)}`}</h4>
-          <p>
-            ${advisorReason(best)}
-          </p>
+          <h4>${mainTitle}</h4>
+          <p>${mainText}</p>
+
+          <div class="tp-advisor-diagnosis ${diagnosis.level}">
+            <strong>${escapeHtml(diagnosis.title)}</strong>
+            <small>${escapeHtml(diagnosis.text)}</small>
+          </div>
+
+          ${bottleneck ? advisorBottleneckHtml(bottleneck) : ""}
+
+          <div class="tp-advisor-plan">
+            <div class="tp-advisor-plan-title">
+              <strong>Plano automático</strong>
+              <small>${planData.plan.length}/${planData.freeSlots} slots livres planejados</small>
+            </div>
+
+            ${
+              planData.plan.length
+                ? planData.plan.map(({ slotIndex, project }, index) => `
+                    <div class="tp-advisor-plan-row">
+                      <span>${index + 1}</span>
+                      <div>
+                        <strong>Slot ${slotIndex + 1}: ${escapeHtml(project.name)}</strong>
+                        <small>
+                          ${fmt(project.xpPerMin, 1)} XP/min •
+                          ${fmt(project.goldPerMin, 1)} ouro/min
+                        </small>
+                      </div>
+                    </div>
+                  `).join("")
+                : `
+                    <div class="tp-advisor-plan-empty">
+                      Nenhum slot livre pode ser preenchido com os recursos atuais.
+                    </div>
+                  `
+            }
+          </div>
+
+          ${
+            planData.plan.length
+              ? `<button class="tp-advisor-auto-fill" id="advisorAutoFillButton">
+                   ⚡ PREENCHER SLOTS RECOMENDADOS
+                 </button>`
+              : ""
+          }
         </div>
       `;
     }
@@ -1732,34 +2079,141 @@ document.addEventListener("DOMContentLoaded", () => {
     setCraftText("bestGoldPerMin", `${bestGold.name} • ${fmt(bestGold.goldPerMin, 1)}`);
     setCraftText("bestBalancedItem", best.name);
     setCraftText("worstCraftItem", worst.name);
+
+    document.getElementById("advisorAutoFillButton")
+      ?.addEventListener("click", () => {
+        const freshPlan = buildSmartSlotPlan();
+
+        freshPlan.plan.forEach(({ slotIndex, project }) => {
+          crafting.queue[slotIndex] = project.id;
+        });
+
+        saveCrafting();
+        updateCraftingUI();
+      });
+
+    renderAdvisorExtension();
+  }
+
+  function advisorBottleneckHtml(bottleneck) {
+    if (bottleneck.type === "shortage") {
+      const missing = Math.max(0, bottleneck.required - bottleneck.available);
+
+      let binText = "";
+
+      if (bottleneck.bin) {
+        const next = bottleneck.bin.nextCapacity
+          ? ` Se evoluir o recipiente #${bottleneck.bin.index} do Nv.${bottleneck.bin.level}, a capacidade individual passa de ${bottleneck.bin.currentCapacity} para ${bottleneck.bin.nextCapacity}.`
+          : "";
+
+        binText = next;
+      }
+
+      return `
+        <div class="tp-advisor-bottleneck">
+          <span>⚠️ GARGALO</span>
+          <strong>${escapeHtml(bottleneck.resource)}</strong>
+          <small>
+            Faltam ${fmt(missing)} para o melhor projeto atual.
+            ${bottleneck.capacity !== null ? `Sua capacidade de loja cadastrada é ${fmt(bottleneck.capacity)}.` : ""}
+            ${escapeHtml(binText)}
+          </small>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="tp-advisor-bottleneck">
+        <span>⚠️ PRESSÃO DE RECURSO</span>
+        <strong>${escapeHtml(bottleneck.resource)}</strong>
+        <small>
+          Este recurso está limitando o preenchimento de todos os slots.
+          ${bottleneck.capacity !== null ? `Capacidade cadastrada: ${fmt(bottleneck.capacity)}.` : ""}
+        </small>
+      </div>
+    `;
   }
 
   function advisorReason(project) {
+    const resourceCount = Object.keys(project.resources || {}).length;
+
     const parts = [
       `${fmt(project.xpPerMin, 1)} XP/min`,
       `${fmt(project.goldPerMin, 1)} ouro/min`,
+      `${resourceCount} recurso${resourceCount === 1 ? "" : "s"}`,
       `estoque ${fmt(project.stock)}`
     ];
 
     if (!project.craftable) {
-      parts.push("recursos insuficientes");
+      parts.push("não fabricável com o saldo livre atual");
     } else {
-      parts.push("recursos disponíveis");
+      parts.push("fabricável agora");
     }
 
     if (crafting.strategy === "xp") {
-      return `No modo XP, este projeto se destaca por ${parts.join(", ")}.`;
+      return `No modo XP, o Advisor priorizou ganho de experiência. ${parts.join(" • ")}.`;
     }
 
     if (crafting.strategy === "gold") {
-      return `No modo Ouro, este projeto se destaca por ${parts.join(", ")}.`;
+      return `No modo Ouro, o Advisor priorizou retorno por minuto. ${parts.join(" • ")}.`;
     }
 
     if (crafting.strategy === "balanced") {
-      return `No modo Equilibrado, este projeto apresenta a melhor combinação atual: ${parts.join(", ")}.`;
+      return `No modo Equilibrado, o Advisor buscou a melhor combinação entre experiência e ouro. ${parts.join(" • ")}.`;
     }
 
-    return `Para crescimento rápido, o TitanPath ponderou XP e ouro com maior peso em XP. Resultado atual: ${parts.join(", ")}.`;
+    return `No modo Crescimento Rápido, o TitanPath dá mais peso a XP sem ignorar ouro, estoque e disponibilidade. ${parts.join(" • ")}.`;
+  }
+
+  function renderAdvisorExtension() {
+    document.getElementById("tpSmartResourceStatus")?.remove();
+
+    const advisorPanel = document.querySelector("#page-crafting .crafting-advisor-panel");
+    if (!advisorPanel) return;
+
+    const card = document.createElement("div");
+    card.id = "tpSmartResourceStatus";
+    card.className = "tp-smart-resource-status";
+
+    const capacities = shopResourceCapacities();
+    const effective = effectiveResources();
+    const reserved = queuedReservedResources();
+
+    const basicResources = ["Ferro", "Madeira", "Couro", "Ervas"];
+
+    card.innerHTML = `
+      <div class="tp-smart-resource-header">
+        <div>
+          <span>🏪 LOJA → FABRICAÇÃO</span>
+          <strong>Recursos e capacidades</strong>
+        </div>
+        <small>${escapeHtml(resourceFreshnessText())}</small>
+      </div>
+
+      <div class="tp-smart-resource-grid">
+        ${basicResources.map(resource => `
+          <div>
+            <span>${resource}</span>
+            <strong>${fmt(effective[resource] || 0)} livres</strong>
+            <small>
+              ${fmt(reserved[resource] || 0)} reservados •
+              capacidade ${capacities[resource] !== undefined ? fmt(capacities[resource]) : "—"}
+            </small>
+          </div>
+        `).join("")}
+      </div>
+
+      <small class="tp-smart-resource-note">
+        A capacidade é lida automaticamente dos cestos cadastrados em Minha Loja.
+        A quantidade atual de recursos continua sendo o saldo que você informa em Editar Fabricação.
+      </small>
+    `;
+
+    advisorPanel.appendChild(card);
+  }
+
+  function renderSmartResourceStatus() {
+    renderAdvisorExtension();
   }
 
   function escapeHtml(value) {
@@ -1828,8 +2282,15 @@ document.addEventListener("DOMContentLoaded", () => {
       ...Object.keys(crafting.resources)
     ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
+    const capacities = shopResourceCapacities();
+
     container.innerHTML = names.map(name => `
-      <label>${escapeHtml(name)}
+      <label>
+        <span class="tp-resource-input-label">
+          ${escapeHtml(name)}
+          ${capacities[name] !== undefined ? `<small>Cap. loja: ${fmt(capacities[name])}</small>` : ""}
+        </span>
+
         <input
           type="number"
           min="0"
@@ -1873,6 +2334,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = input.dataset.craftingResource;
         crafting.resources[name] = Math.max(0, Number(input.value || 0));
       });
+
+      crafting.resourcesUpdatedAt = Date.now();
 
       syncQueueLength();
       saveCrafting();
@@ -1952,10 +2415,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("projectResourceInputs");
     if (!container) return;
 
-    const names = [...new Set([
-      ...blueprintResourceCatalog,
-      ...Object.keys(values || {})
-    ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const providedNames = Object.entries(values || {})
+      .filter(([, amount]) => Number(amount) > 0)
+      .map(([name]) => name);
+
+    const names = (
+      providedNames.length
+        ? [...new Set(providedNames)]
+        : [...new Set(blueprintResourceCatalog)]
+    ).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     container.innerHTML = names.map(name => `
       <label>${escapeHtml(name)}
@@ -2178,8 +2646,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let matches = blueprintCatalog.filter(item => {
       if (!normalized) return true;
 
+      const aliases = Array.isArray(item.searchAliases)
+        ? item.searchAliases.join(" ")
+        : "";
+
       const haystack = normalizeSearch(
-        `${item.namePt || ""} ${item.categoryPt || ""} ${item.id || ""}`
+        `${item.namePt || ""} ${item.nameOriginal || ""} ${aliases} ${item.categoryPt || ""} ${item.id || ""}`
       );
 
       return haystack.includes(normalized);
@@ -2210,6 +2682,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <button class="tp-catalog-item" data-catalog-id="${escapeHtml(item.id)}">
           <div>
             <strong>${escapeHtml(item.namePt || "Projeto")}</strong>
+            ${
+              item.nameOriginal && item.nameOriginal !== item.namePt
+                ? `<small class="tp-catalog-original-name">${escapeHtml(item.nameOriginal)}</small>`
+                : ""
+            }
             <span>
               ${item.tier ? `Tier ${item.tier}` : "Tier não informado"} •
               ${escapeHtml(item.categoryPt || "Categoria")}
@@ -2475,6 +2952,243 @@ document.addEventListener("DOMContentLoaded", () => {
     .tp-catalog-project-info span{margin-top:4px;color:#fff;font-weight:800}
     .tp-catalog-project-info small{margin-top:5px;color:#8c99aa;line-height:1.4}
 
+
+    .tp-smart-advisor-copy{
+      display:grid;
+      gap:12px;
+    }
+
+    .tp-advisor-diagnosis{
+      padding:11px 12px;
+      border-radius:11px;
+      border:1px solid rgba(255,255,255,.07);
+      background:rgba(255,255,255,.025);
+    }
+
+    .tp-advisor-diagnosis strong,
+    .tp-advisor-diagnosis small{
+      display:block;
+    }
+
+    .tp-advisor-diagnosis small{
+      margin-top:4px;
+      color:#8c99aa;
+      line-height:1.45;
+    }
+
+    .tp-advisor-diagnosis.good{
+      border-color:rgba(35,209,139,.18);
+      background:rgba(35,209,139,.055);
+    }
+
+    .tp-advisor-diagnosis.warning{
+      border-color:rgba(244,185,66,.22);
+      background:rgba(244,185,66,.055);
+    }
+
+    .tp-advisor-bottleneck{
+      padding:12px;
+      border-radius:11px;
+      border:1px solid rgba(255,95,102,.18);
+      background:rgba(255,95,102,.055);
+    }
+
+    .tp-advisor-bottleneck span,
+    .tp-advisor-bottleneck strong,
+    .tp-advisor-bottleneck small{
+      display:block;
+    }
+
+    .tp-advisor-bottleneck span{
+      color:#ff9297;
+      font-size:9px;
+      font-weight:900;
+      letter-spacing:.12em;
+    }
+
+    .tp-advisor-bottleneck strong{
+      margin-top:4px;
+      color:#fff;
+    }
+
+    .tp-advisor-bottleneck small{
+      margin-top:4px;
+      color:#9aa6b6;
+      line-height:1.45;
+    }
+
+    .tp-advisor-plan{
+      display:grid;
+      gap:7px;
+      padding:12px;
+      border-radius:12px;
+      background:#0a1017;
+      border:1px solid rgba(255,255,255,.07);
+    }
+
+    .tp-advisor-plan-title{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      margin-bottom:2px;
+    }
+
+    .tp-advisor-plan-title small{
+      color:#6e7887;
+    }
+
+    .tp-advisor-plan-row{
+      display:grid;
+      grid-template-columns:28px 1fr;
+      gap:9px;
+      align-items:center;
+      padding:8px;
+      border-radius:9px;
+      background:rgba(255,255,255,.025);
+    }
+
+    .tp-advisor-plan-row>span{
+      width:28px;
+      height:28px;
+      display:grid;
+      place-items:center;
+      border-radius:8px;
+      background:rgba(244,185,66,.1);
+      color:#ffd36a;
+      font-weight:900;
+      font-size:11px;
+    }
+
+    .tp-advisor-plan-row strong,
+    .tp-advisor-plan-row small{
+      display:block;
+    }
+
+    .tp-advisor-plan-row small{
+      margin-top:3px;
+      color:#788494;
+      font-size:10px;
+    }
+
+    .tp-advisor-plan-empty{
+      color:#7b8796;
+      font-size:11px;
+      padding:7px 0;
+    }
+
+    .tp-advisor-auto-fill{
+      width:100%;
+      min-height:46px;
+      border-radius:11px;
+      cursor:pointer;
+      background:linear-gradient(135deg,#ffd36a,#f4b942);
+      color:#171005;
+      font-weight:900;
+    }
+
+    .tp-smart-resource-status{
+      margin-top:14px;
+      padding:13px;
+      border-radius:12px;
+      background:rgba(255,255,255,.022);
+      border:1px solid rgba(255,255,255,.065);
+    }
+
+    .tp-smart-resource-header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .tp-smart-resource-header span,
+    .tp-smart-resource-header strong{
+      display:block;
+    }
+
+    .tp-smart-resource-header span{
+      color:#ffd36a;
+      font-size:9px;
+      font-weight:900;
+      letter-spacing:.12em;
+    }
+
+    .tp-smart-resource-header strong{
+      margin-top:4px;
+      font-size:14px;
+    }
+
+    .tp-smart-resource-header>small{
+      color:#6e7887;
+      font-size:9px;
+      text-align:right;
+    }
+
+    .tp-smart-resource-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:7px;
+      margin-top:10px;
+    }
+
+    .tp-smart-resource-grid>div{
+      padding:8px;
+      border-radius:9px;
+      background:#0a1017;
+      border:1px solid rgba(255,255,255,.055);
+    }
+
+    .tp-smart-resource-grid span,
+    .tp-smart-resource-grid strong,
+    .tp-smart-resource-grid small{
+      display:block;
+    }
+
+    .tp-smart-resource-grid span{
+      color:#8d98a8;
+      font-size:9px;
+    }
+
+    .tp-smart-resource-grid strong{
+      margin-top:3px;
+      font-size:12px;
+    }
+
+    .tp-smart-resource-grid small{
+      margin-top:3px;
+      color:#626d7b;
+      font-size:8px;
+      line-height:1.35;
+    }
+
+    .tp-smart-resource-note{
+      display:block;
+      margin-top:9px;
+      color:#66717f;
+      font-size:9px;
+      line-height:1.45;
+    }
+
+    .tp-resource-input-label{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:center;
+    }
+
+    .tp-resource-input-label small{
+      color:#6e7887;
+      font-size:8px;
+      font-weight:600;
+    }
+
+    .tp-catalog-original-name{
+      color:#596575!important;
+      font-size:9px!important;
+      margin-top:2px!important;
+    }
+
     @media(max-width:640px){
       #catalogSearchModal{align-items:flex-end;padding:0}
       .tp-catalog-modal{
@@ -2499,6 +3213,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       .tp-project-actions button{
         flex:1 1 auto;
+      }
+
+      .tp-smart-resource-grid{
+        grid-template-columns:1fr 1fr;
+      }
+
+      .tp-advisor-plan-title{
+        align-items:flex-start;
+        flex-direction:column;
+        gap:3px;
+      }
+
+      .tp-smart-resource-header{
+        align-items:flex-start;
+        flex-direction:column;
+      }
+
+      .tp-smart-resource-header>small{
+        text-align:left;
       }
     }
 
