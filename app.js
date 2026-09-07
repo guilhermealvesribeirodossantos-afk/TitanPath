@@ -1121,16 +1121,58 @@ document.addEventListener("DOMContentLoaded", () => {
     sort: "advisor",
     filter: "all",
     resources: {
-      wood: 0,
-      iron: 0,
-      leather: 0,
-      herbs: 0
+      "Madeira": 0,
+      "Ferro": 0,
+      "Couro": 0,
+      "Ervas": 0,
+      "Aço": 0,
+      "Madeira de Ferro": 0,
+      "Tecido": 0,
+      "Óleo": 0,
+      "Joias": 0,
+      "Éter": 0,
+      "Essência": 0,
+      "Poeira Estelar": 0
     },
     projects: [],
     queue: [null, null, null, null]
   };
 
   let crafting = loadCrafting();
+
+  let blueprintCatalog = [];
+  let blueprintResourceCatalog = Object.keys(crafting.resources);
+  let selectedCatalogBlueprint = null;
+
+  async function loadBlueprintCatalog() {
+    try {
+      const response = await fetch("data/blueprints-pt.json", { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      blueprintCatalog = Array.isArray(data.blueprints) ? data.blueprints : [];
+
+      if (Array.isArray(data.resourceCatalog)) {
+        blueprintResourceCatalog = [...new Set([
+          ...Object.keys(crafting.resources),
+          ...data.resourceCatalog
+        ])];
+      }
+
+      blueprintResourceCatalog.forEach(resource => {
+        if (!(resource in crafting.resources)) crafting.resources[resource] = 0;
+      });
+
+      saveCrafting();
+    } catch (error) {
+      console.error("TitanPath: não foi possível carregar o catálogo:", error);
+      blueprintCatalog = [];
+    }
+  }
 
   function cloneCrafting(obj) {
     return JSON.parse(JSON.stringify(obj));
@@ -1216,12 +1258,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function canCraft(project) {
     const req = project.resources || {};
 
-    return (
-      Number(crafting.resources.wood || 0) >= Number(req.wood || 0) &&
-      Number(crafting.resources.iron || 0) >= Number(req.iron || 0) &&
-      Number(crafting.resources.leather || 0) >= Number(req.leather || 0) &&
-      Number(crafting.resources.herbs || 0) >= Number(req.herbs || 0)
-    );
+    return Object.entries(req).every(([resource, amount]) => {
+      return Number(crafting.resources[resource] || 0) >= Number(amount || 0);
+    });
   }
 
   function normalize(value, min, max) {
@@ -1432,10 +1471,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function consumeResources(project) {
     const req = project.resources || {};
 
-    Object.keys(crafting.resources).forEach(key => {
-      crafting.resources[key] = Math.max(
+    Object.entries(req).forEach(([resource, amount]) => {
+      crafting.resources[resource] = Math.max(
         0,
-        Number(crafting.resources[key] || 0) - Number(req[key] || 0)
+        Number(crafting.resources[resource] || 0) - Number(amount || 0)
       );
     });
   }
@@ -1625,21 +1664,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function resourceText(project) {
-    const labels = {
-      wood: "Madeira",
-      iron: "Ferro",
-      leather: "Couro",
-      herbs: "Ervas"
-    };
-
     const entries = Object.entries(project.resources || {})
       .filter(([, amount]) => Number(amount) > 0);
 
-    if (!entries.length) return "Recursos básicos não informados";
+    const resourcePart = entries.length
+      ? entries.map(([name, amount]) => `${escapeHtml(name)}: ${fmt(amount)}`).join(" • ")
+      : "Recursos não informados";
 
-    return entries
-      .map(([key, amount]) => `${labels[key] || key}: ${fmt(amount)}`)
-      .join(" • ");
+    const components = Array.isArray(project.components) ? project.components : [];
+
+    const componentPart = components.length
+      ? ` | Componentes: ${components.map(c => `${escapeHtml(c.name)} ×${fmt(c.amount)}`).join(" • ")}`
+      : "";
+
+    return resourcePart + componentPart;
   }
 
   function renderCraftingAdvisor() {
@@ -1769,23 +1807,7 @@ document.addEventListener("DOMContentLoaded", () => {
             Informe apenas o que você tem disponível no momento. O TitanPath usa isso para saber o que é fabricável.
           </p>
 
-          <div class="tp-resource-edit-grid">
-            <label>Madeira
-              <input type="number" id="editResourceWood" min="0">
-            </label>
-
-            <label>Ferro
-              <input type="number" id="editResourceIron" min="0">
-            </label>
-
-            <label>Couro
-              <input type="number" id="editResourceLeather" min="0">
-            </label>
-
-            <label>Ervas
-              <input type="number" id="editResourceHerbs" min="0">
-            </label>
-          </div>
+          <div class="tp-resource-edit-grid" id="craftingResourceInputs"></div>
         </section>
       </div>
 
@@ -1797,12 +1819,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.body.appendChild(craftingModal);
 
+  function renderCraftingResourceInputs() {
+    const container = document.getElementById("craftingResourceInputs");
+    if (!container) return;
+
+    const names = [...new Set([
+      ...blueprintResourceCatalog,
+      ...Object.keys(crafting.resources)
+    ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    container.innerHTML = names.map(name => `
+      <label>${escapeHtml(name)}
+        <input
+          type="number"
+          min="0"
+          value="${Number(crafting.resources[name] || 0)}"
+          data-crafting-resource="${escapeHtml(name)}"
+        >
+      </label>
+    `).join("");
+  }
+
   function openCraftingEditor() {
     document.getElementById("editCraftingSlots").value = crafting.totalSlots;
-    document.getElementById("editResourceWood").value = crafting.resources.wood;
-    document.getElementById("editResourceIron").value = crafting.resources.iron;
-    document.getElementById("editResourceLeather").value = crafting.resources.leather;
-    document.getElementById("editResourceHerbs").value = crafting.resources.herbs;
+    renderCraftingResourceInputs();
 
     craftingModal.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -1829,25 +1869,10 @@ document.addEventListener("DOMContentLoaded", () => {
         Number(document.getElementById("editCraftingSlots").value || 4)
       );
 
-      crafting.resources.wood = Math.max(
-        0,
-        Number(document.getElementById("editResourceWood").value || 0)
-      );
-
-      crafting.resources.iron = Math.max(
-        0,
-        Number(document.getElementById("editResourceIron").value || 0)
-      );
-
-      crafting.resources.leather = Math.max(
-        0,
-        Number(document.getElementById("editResourceLeather").value || 0)
-      );
-
-      crafting.resources.herbs = Math.max(
-        0,
-        Number(document.getElementById("editResourceHerbs").value || 0)
-      );
+      document.querySelectorAll("[data-crafting-resource]").forEach(input => {
+        const name = input.dataset.craftingResource;
+        crafting.resources[name] = Math.max(0, Number(input.value || 0));
+      });
 
       syncQueueLength();
       saveCrafting();
@@ -1910,23 +1935,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <h3 class="tp-project-resource-title">Recursos necessários</h3>
 
-        <div class="tp-project-form-grid">
-          <label>Madeira
-            <input type="number" id="projectWood" min="0" value="0">
-          </label>
+        <div class="tp-project-form-grid" id="projectResourceInputs"></div>
 
-          <label>Ferro
-            <input type="number" id="projectIron" min="0" value="0">
-          </label>
-
-          <label>Couro
-            <input type="number" id="projectLeather" min="0" value="0">
-          </label>
-
-          <label>Ervas
-            <input type="number" id="projectHerbs" min="0" value="0">
-          </label>
-        </div>
+        <div class="tp-catalog-project-info" id="catalogProjectInfo" hidden></div>
       </div>
 
       <button id="saveProjectButton" class="tp-save-button">
@@ -1937,25 +1948,91 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.body.appendChild(projectModal);
 
-  function openProjectEditor(id = null) {
+  function renderProjectResourceInputs(values = {}) {
+    const container = document.getElementById("projectResourceInputs");
+    if (!container) return;
+
+    const names = [...new Set([
+      ...blueprintResourceCatalog,
+      ...Object.keys(values || {})
+    ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    container.innerHTML = names.map(name => `
+      <label>${escapeHtml(name)}
+        <input
+          type="number"
+          min="0"
+          value="${Number(values[name] || 0)}"
+          data-project-resource="${escapeHtml(name)}"
+        >
+      </label>
+    `).join("");
+  }
+
+  function catalogResourcesToObject(blueprint) {
+    const output = {};
+
+    (blueprint?.resources || []).forEach(resource => {
+      output[resource.name] = Number(resource.amount || 0);
+    });
+
+    return output;
+  }
+
+  function openProjectEditor(id = null, catalogBlueprint = null) {
     const project = id ? projectById(id) : null;
+    selectedCatalogBlueprint = catalogBlueprint || null;
+
+    const source = project || (catalogBlueprint ? {
+      id: "",
+      name: catalogBlueprint.namePt || "",
+      tier: catalogBlueprint.tier || 1,
+      category: catalogBlueprint.categoryPt || "Item",
+      timeMin: catalogBlueprint.craftTimeMinutes || 1,
+      baseValue: catalogBlueprint.value || 0,
+      xp: catalogBlueprint.merchantXp || 0,
+      stock: 0,
+      resources: catalogResourcesToObject(catalogBlueprint),
+      components: catalogBlueprint.components || [],
+      workers: catalogBlueprint.workers || [],
+      energy: catalogBlueprint.energy || {},
+      sourceUrl: catalogBlueprint.sourceUrl || "",
+      catalogId: catalogBlueprint.id || ""
+    } : null);
 
     setProjectValue("projectId", project?.id || "");
-    setProjectValue("projectName", project?.name || "");
-    setProjectValue("projectTier", project?.tier || 1);
-    setProjectValue("projectCategory", project?.category || "");
-    setProjectValue("projectTime", project?.timeMin || 1);
-    setProjectValue("projectValue", project?.baseValue || 0);
-    setProjectValue("projectXp", project?.xp || 0);
-    setProjectValue("projectStock", project?.stock || 0);
-    setProjectValue("projectWood", project?.resources?.wood || 0);
-    setProjectValue("projectIron", project?.resources?.iron || 0);
-    setProjectValue("projectLeather", project?.resources?.leather || 0);
-    setProjectValue("projectHerbs", project?.resources?.herbs || 0);
+    setProjectValue("projectName", source?.name || "");
+    setProjectValue("projectTier", source?.tier || 1);
+    setProjectValue("projectCategory", source?.category || "");
+    setProjectValue("projectTime", source?.timeMin || 1);
+    setProjectValue("projectValue", source?.baseValue || 0);
+    setProjectValue("projectXp", source?.xp || 0);
+    setProjectValue("projectStock", source?.stock || 0);
+
+    renderProjectResourceInputs(source?.resources || {});
+
+    const info = document.getElementById("catalogProjectInfo");
+    if (info) {
+      if (catalogBlueprint) {
+        const components = (catalogBlueprint.components || [])
+          .map(c => `${escapeHtml(c.name)} ×${fmt(c.amount)}`)
+          .join(" • ");
+
+        info.hidden = false;
+        info.innerHTML = `
+          <strong>Dados preenchidos automaticamente</strong>
+          <span>${escapeHtml(catalogBlueprint.namePt || "")}</span>
+          <small>${components ? `Componentes: ${components}` : "Sem componentes cadastrados no seed atual."}</small>
+        `;
+      } else {
+        info.hidden = true;
+        info.innerHTML = "";
+      }
+    }
 
     setCraftText(
       "projectEditorTitle",
-      project ? "Editar projeto" : "Adicionar projeto"
+      project ? "Editar projeto" : (catalogBlueprint ? "Adicionar do catálogo" : "Adicionar projeto manual")
     );
 
     projectModal.classList.add("open");
@@ -1973,7 +2050,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.getElementById("addBlueprintButton")
-    ?.addEventListener("click", () => openProjectEditor());
+    ?.addEventListener("click", () => openCatalogSearch());
 
   document.getElementById("closeProjectEditor")
     .addEventListener("click", closeProjectEditor);
@@ -2001,12 +2078,19 @@ document.addEventListener("DOMContentLoaded", () => {
         baseValue: Math.max(0, Number(document.getElementById("projectValue").value || 0)),
         xp: Math.max(0, Number(document.getElementById("projectXp").value || 0)),
         stock: Math.max(0, Number(document.getElementById("projectStock").value || 0)),
-        resources: {
-          wood: Math.max(0, Number(document.getElementById("projectWood").value || 0)),
-          iron: Math.max(0, Number(document.getElementById("projectIron").value || 0)),
-          leather: Math.max(0, Number(document.getElementById("projectLeather").value || 0)),
-          herbs: Math.max(0, Number(document.getElementById("projectHerbs").value || 0))
-        }
+        resources: Object.fromEntries(
+          [...document.querySelectorAll("[data-project-resource]")]
+            .map(input => [
+              input.dataset.projectResource,
+              Math.max(0, Number(input.value || 0))
+            ])
+            .filter(([, amount]) => amount > 0)
+        ),
+        catalogId: selectedCatalogBlueprint?.id || projectById(id)?.catalogId || null,
+        components: selectedCatalogBlueprint?.components || projectById(id)?.components || [],
+        workers: selectedCatalogBlueprint?.workers || projectById(id)?.workers || [],
+        energy: selectedCatalogBlueprint?.energy || projectById(id)?.energy || {},
+        sourceUrl: selectedCatalogBlueprint?.sourceUrl || projectById(id)?.sourceUrl || ""
       };
 
       const existingIndex = crafting.projects.findIndex(p => p.id === data.id);
@@ -2020,6 +2104,152 @@ document.addEventListener("DOMContentLoaded", () => {
       saveCrafting();
       updateCraftingUI();
       closeProjectEditor();
+    });
+
+  /* =======================================================
+     CATÁLOGO / BUSCA AUTOMÁTICA
+  ======================================================= */
+
+  const catalogModal = document.createElement("div");
+  catalogModal.id = "catalogSearchModal";
+  catalogModal.innerHTML = `
+    <div class="tp-modal-overlay"></div>
+
+    <div class="tp-modal tp-catalog-modal">
+      <div class="tp-modal-header">
+        <div>
+          <span>CATÁLOGO SHOP TITANS</span>
+          <h2>Buscar projeto</h2>
+        </div>
+        <button id="closeCatalogSearch">✕</button>
+      </div>
+
+      <div class="tp-catalog-search-box">
+        <input
+          type="search"
+          id="catalogSearchInput"
+          placeholder="Digite o nome do item em português..."
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="tp-catalog-meta" id="catalogMeta"></div>
+      <div class="tp-catalog-results" id="catalogResults"></div>
+
+      <button class="tp-manual-project-button" id="manualProjectButton">
+        Não achei o item — cadastrar manualmente
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(catalogModal);
+
+  function openCatalogSearch() {
+    const input = document.getElementById("catalogSearchInput");
+    if (input) input.value = "";
+
+    renderCatalogResults("");
+    catalogModal.classList.add("open");
+    document.body.style.overflow = "hidden";
+
+    setTimeout(() => input?.focus(), 50);
+  }
+
+  function closeCatalogSearch() {
+    catalogModal.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function normalizeSearch(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  function renderCatalogResults(query) {
+    const results = document.getElementById("catalogResults");
+    const meta = document.getElementById("catalogMeta");
+    if (!results || !meta) return;
+
+    const normalized = normalizeSearch(query);
+
+    let matches = blueprintCatalog.filter(item => {
+      if (!normalized) return true;
+
+      const haystack = normalizeSearch(
+        `${item.namePt || ""} ${item.categoryPt || ""} ${item.id || ""}`
+      );
+
+      return haystack.includes(normalized);
+    });
+
+    matches = matches.slice(0, 30);
+
+    meta.textContent = blueprintCatalog.length
+      ? `${blueprintCatalog.length} projetos carregados • ${matches.length} resultado(s) exibidos`
+      : "Catálogo não carregado. Verifique data/blueprints-pt.json.";
+
+    if (!matches.length) {
+      results.innerHTML = `
+        <div class="tp-catalog-empty">
+          <strong>Nenhum projeto encontrado</strong>
+          <small>Tente outro nome ou use o cadastro manual.</small>
+        </div>
+      `;
+      return;
+    }
+
+    results.innerHTML = matches.map(item => {
+      const resources = (item.resources || [])
+        .map(r => `${escapeHtml(r.name)} ${fmt(r.amount)}`)
+        .join(" • ");
+
+      return `
+        <button class="tp-catalog-item" data-catalog-id="${escapeHtml(item.id)}">
+          <div>
+            <strong>${escapeHtml(item.namePt || "Projeto")}</strong>
+            <span>
+              ${item.tier ? `Tier ${item.tier}` : "Tier não informado"} •
+              ${escapeHtml(item.categoryPt || "Categoria")}
+            </span>
+            <small>${resources || "Recursos não informados"}</small>
+          </div>
+          <span class="tp-catalog-arrow">→</span>
+        </button>
+      `;
+    }).join("");
+
+    results.querySelectorAll("[data-catalog-id]").forEach(button => {
+      button.addEventListener("click", () => {
+        const blueprint = blueprintCatalog.find(
+          item => item.id === button.dataset.catalogId
+        );
+
+        if (!blueprint) return;
+
+        closeCatalogSearch();
+        openProjectEditor(null, blueprint);
+      });
+    });
+  }
+
+  document.getElementById("catalogSearchInput")
+    ?.addEventListener("input", event => {
+      renderCatalogResults(event.target.value);
+    });
+
+  document.getElementById("closeCatalogSearch")
+    ?.addEventListener("click", closeCatalogSearch);
+
+  catalogModal.querySelector(".tp-modal-overlay")
+    ?.addEventListener("click", closeCatalogSearch);
+
+  document.getElementById("manualProjectButton")
+    ?.addEventListener("click", () => {
+      closeCatalogSearch();
+      openProjectEditor();
     });
 
   /* =======================================================
@@ -2170,7 +2400,87 @@ document.addEventListener("DOMContentLoaded", () => {
       border-color:rgba(244,185,66,.22);
     }
 
+    .tp-catalog-modal{
+      width:min(760px,100%);
+    }
+
+    #catalogSearchModal{
+      position:fixed;inset:0;z-index:10020;display:none;
+      align-items:center;justify-content:center;padding:20px;
+    }
+
+    #catalogSearchModal.open{display:flex}
+
+    .tp-catalog-search-box input{
+      width:100%;min-height:52px;padding:0 15px;border-radius:12px;
+      border:1px solid rgba(244,185,66,.28);outline:none;background:#080c12;
+      color:#fff;font-size:16px;
+    }
+
+    .tp-catalog-meta{
+      margin:10px 0;color:#6e7887;font-size:11px;
+    }
+
+    .tp-catalog-results{
+      display:grid;gap:8px;max-height:54vh;overflow-y:auto;padding-right:4px;
+    }
+
+    .tp-catalog-item{
+      width:100%;display:grid;grid-template-columns:1fr auto;gap:12px;
+      align-items:center;text-align:left;padding:13px;border-radius:12px;
+      background:#0b1119;border:1px solid rgba(255,255,255,.07);
+      color:#fff;cursor:pointer;
+    }
+
+    .tp-catalog-item strong,.tp-catalog-item span,.tp-catalog-item small{
+      display:block;
+    }
+
+    .tp-catalog-item span{
+      margin-top:3px;color:#a7b0bf;font-size:11px;
+    }
+
+    .tp-catalog-item small{
+      margin-top:5px;color:#6e7887;font-size:10px;line-height:1.4;
+    }
+
+    .tp-catalog-arrow{
+      color:#ffd36a!important;font-size:20px!important;
+    }
+
+    .tp-catalog-empty{
+      padding:26px;text-align:center;border:1px dashed rgba(255,255,255,.08);
+      border-radius:12px;color:#a7b0bf;
+    }
+
+    .tp-catalog-empty strong,.tp-catalog-empty small{display:block}
+    .tp-catalog-empty small{margin-top:5px;color:#6e7887}
+
+    .tp-manual-project-button{
+      width:100%;min-height:44px;margin-top:12px;border-radius:11px;
+      background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);
+      color:#a7b0bf;cursor:pointer;font-weight:800;
+    }
+
+    .tp-catalog-project-info{
+      padding:12px;border-radius:11px;background:rgba(35,209,139,.06);
+      border:1px solid rgba(35,209,139,.14);
+    }
+
+    .tp-catalog-project-info strong,.tp-catalog-project-info span,.tp-catalog-project-info small{
+      display:block;
+    }
+
+    .tp-catalog-project-info strong{color:#7fe8bb;font-size:11px}
+    .tp-catalog-project-info span{margin-top:4px;color:#fff;font-weight:800}
+    .tp-catalog-project-info small{margin-top:5px;color:#8c99aa;line-height:1.4}
+
     @media(max-width:640px){
+      #catalogSearchModal{align-items:flex-end;padding:0}
+      .tp-catalog-modal{
+        width:100%;max-height:94vh;border-radius:22px 22px 0 0;
+      }
+
       #craftingEditor,#projectEditor{
         align-items:flex-end;
         padding:0;
@@ -2209,5 +2519,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  updateCraftingUI();
+  loadBlueprintCatalog().finally(() => {
+    updateCraftingUI();
+  });
 });
