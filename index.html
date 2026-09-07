@@ -201,7 +201,171 @@
         </section>
       </section>
 
-      <section class="page" id="page-crafting"><div class="page-placeholder"><span>🔨</span><h2>Fabricação</h2><p>Projetos, recursos e planejamento de produção.</p></div></section>
+      <!-- FABRICAÇÃO INTELIGENTE v0.3.0 -->
+      <section class="page" id="page-crafting">
+        <section class="shop-hero panel crafting-hero">
+          <div>
+            <span class="eyebrow gold-text">🔨 FABRICAÇÃO INTELIGENTE</span>
+            <h2>Produza o que realmente compensa</h2>
+            <p>O TitanPath vai comparar tempo, recursos, XP, ouro e estoque para recomendar o melhor uso dos seus slots.</p>
+          </div>
+          <div class="crafting-hero-actions">
+            <button class="primary-button" id="editCraftingButton">✏️ EDITAR FABRICAÇÃO</button>
+            <button class="crafting-secondary-button" id="addBlueprintButton">＋ ADICIONAR PROJETO</button>
+          </div>
+        </section>
+
+        <section class="crafting-summary-grid">
+          <article class="panel crafting-summary-card">
+            <span>🔨 Slots de fabricação</span>
+            <strong><span id="craftingBusySlots">0</span>/<span id="craftingTotalSlots">4</span></strong>
+            <small id="craftingSlotStatus">4 disponíveis</small>
+          </article>
+
+          <article class="panel crafting-summary-card">
+            <span>📘 Projetos cadastrados</span>
+            <strong id="craftingBlueprintCount">0</strong>
+            <small>Itens disponíveis para análise</small>
+          </article>
+
+          <article class="panel crafting-summary-card">
+            <span>📦 Estoque registrado</span>
+            <strong id="craftingStockCount">0</strong>
+            <small>Total de itens cadastrados</small>
+          </article>
+
+          <article class="panel crafting-summary-card">
+            <span>🎯 Modo atual</span>
+            <strong id="craftingModeLabel">Crescimento Rápido</strong>
+            <small>XP + ouro + eficiência</small>
+          </article>
+        </section>
+
+        <section class="panel crafting-advisor-panel">
+          <div class="crafting-advisor-top">
+            <div>
+              <span class="eyebrow gold-text">🧠 TITAN ADVISOR</span>
+              <h3>O que fabricar agora?</h3>
+            </div>
+            <span class="priority-badge high" id="craftingAdvisorPriority">ANALISANDO</span>
+          </div>
+
+          <div class="crafting-recommendation" id="craftingRecommendation">
+            <div class="crafting-recommendation-icon">⚙️</div>
+            <div>
+              <span>PRÓXIMA AÇÃO</span>
+              <h4>Cadastre seus projetos desbloqueados</h4>
+              <p>Depois disso, o TitanPath poderá comparar automaticamente XP/min, ouro/min, recursos disponíveis e estoque.</p>
+            </div>
+          </div>
+
+          <div class="crafting-advisor-metrics">
+            <div><span>Melhor XP/min</span><strong id="bestXpPerMin">—</strong></div>
+            <div><span>Melhor ouro/min</span><strong id="bestGoldPerMin">—</strong></div>
+            <div><span>Melhor equilíbrio</span><strong id="bestBalancedItem">—</strong></div>
+            <div><span>Evitar agora</span><strong id="worstCraftItem">—</strong></div>
+          </div>
+        </section>
+
+        <section class="crafting-controls panel">
+          <div class="crafting-controls-grid">
+            <label>
+              Estratégia
+              <select id="craftingStrategySelect">
+                <option value="fast-growth">Crescimento Rápido</option>
+                <option value="xp">Priorizar XP</option>
+                <option value="gold">Priorizar Ouro</option>
+                <option value="balanced">Equilibrado</option>
+              </select>
+            </label>
+
+            <label>
+              Ordenar projetos por
+              <select id="craftingSortSelect">
+                <option value="advisor">Recomendação do Advisor</option>
+                <option value="xpPerMin">XP por minuto</option>
+                <option value="goldPerMin">Ouro por minuto</option>
+                <option value="tier">Tier</option>
+                <option value="time">Tempo</option>
+              </select>
+            </label>
+
+            <label>
+              Mostrar
+              <select id="craftingFilterSelect">
+                <option value="all">Todos os projetos</option>
+                <option value="recommended">Recomendados</option>
+                <option value="avoid">Evitar</option>
+                <option value="stock-low">Estoque baixo</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="crafting-section">
+          <div class="panel-heading crafting-section-heading">
+            <div>
+              <span class="eyebrow">⚙️ FILA DE FABRICAÇÃO</span>
+              <h3>Seus slots</h3>
+            </div>
+            <span class="shop-section-note">Acompanhe o que está em produção</span>
+          </div>
+
+          <div class="crafting-slots-grid" id="craftingSlotsGrid">
+            <article class="panel crafting-slot-card empty">
+              <span class="crafting-slot-number">SLOT 1</span>
+              <strong>Livre</strong>
+              <small>O Advisor indicará o próximo item.</small>
+            </article>
+
+            <article class="panel crafting-slot-card empty">
+              <span class="crafting-slot-number">SLOT 2</span>
+              <strong>Livre</strong>
+              <small>O Advisor indicará o próximo item.</small>
+            </article>
+
+            <article class="panel crafting-slot-card empty">
+              <span class="crafting-slot-number">SLOT 3</span>
+              <strong>Livre</strong>
+              <small>O Advisor indicará o próximo item.</small>
+            </article>
+
+            <article class="panel crafting-slot-card empty">
+              <span class="crafting-slot-number">SLOT 4</span>
+              <strong>Livre</strong>
+              <small>O Advisor indicará o próximo item.</small>
+            </article>
+          </div>
+        </section>
+
+        <section class="crafting-section">
+          <div class="panel-heading crafting-section-heading">
+            <div>
+              <span class="eyebrow gold-text">📘 PROJETOS</span>
+              <h3>Projetos desbloqueados</h3>
+            </div>
+            <span class="shop-section-note">Comparação automática de eficiência</span>
+          </div>
+
+          <div class="crafting-blueprints-grid" id="craftingBlueprintsGrid">
+            <article class="panel crafting-empty-state">
+              <span>📘</span>
+              <h4>Nenhum projeto cadastrado ainda</h4>
+              <p>Use “Adicionar Projeto” para informar os itens que você já consegue fabricar. Depois disso, o TitanPath fará os cálculos automaticamente.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel crafting-sales-link">
+          <div class="crafting-sales-icon">💸</div>
+          <div>
+            <span class="eyebrow gold-text">PRÓXIMA INTEGRAÇÃO</span>
+            <h3>Fabricação + Vendas inteligentes</h3>
+            <p>Os itens fabricados alimentarão automaticamente a futura área de Desconto, Venda Normal e Sobretaxa para o TitanPath montar seu ciclo completo de evolução.</p>
+          </div>
+        </section>
+      </section>
+
       <section class="page" id="page-heroes"><div class="page-placeholder"><span>⚔️</span><h2>Heróis</h2><p>Gerenciamento dos seus heróis.</p></div></section>
       <section class="page" id="page-champions"><div class="page-placeholder"><span>🏆</span><h2>Campeões</h2><p>Evolução e prioridades dos seus campeões.</p></div></section>
       <section class="page" id="page-investments"><div class="page-placeholder"><span>🏛️</span><h2>Investimentos</h2><p>Controle seus investimentos na cidade.</p></div></section>
