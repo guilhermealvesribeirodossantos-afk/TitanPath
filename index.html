@@ -1,1266 +1,228 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-  />
-
-  <meta
-    name="description"
-    content="TitanPath - Painel pessoal de evolução e estratégia para Shop Titans."
-  />
-
-  <meta name="theme-color" content="#080b10" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="TitanPath - Painel pessoal de evolução e estratégia para Shop Titans.">
+  <meta name="theme-color" content="#080b10">
   <title>TitanPath | Shop Titans Companion</title>
-
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
-  <!-- ======================================================
-       APP
-  ======================================================= -->
-
-  <div class="app">
-
-    <!-- ======================================================
-         SIDEBAR
-    ======================================================= -->
-
-    <aside class="sidebar" id="sidebar">
-
-      <div class="brand">
-        <div class="brand-crown">♛</div>
-
-        <div>
-          <h1>TITANPATH</h1>
-          <span>Seu guia definitivo para Shop Titans</span>
-        </div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-crown">♛</div>
+      <div>
+        <h1>TITANPATH</h1>
+        <span>Seu guia definitivo para Shop Titans</span>
       </div>
+    </div>
 
-      <nav class="sidebar-nav">
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Início</span></button>
+      <button class="nav-item" data-page="account"><span class="nav-icon">👤</span><span>Minha Conta</span></button>
+      <button class="nav-item" data-page="shop"><span class="nav-icon">🏪</span><span>Minha Loja</span></button>
+      <button class="nav-item" data-page="crafting"><span class="nav-icon">🔨</span><span>Fabricação</span></button>
+      <button class="nav-item" data-page="heroes"><span class="nav-icon">⚔️</span><span>Heróis</span></button>
+      <button class="nav-item" data-page="champions"><span class="nav-icon">🏆</span><span>Campeões</span></button>
+      <button class="nav-item" data-page="investments"><span class="nav-icon">🏛️</span><span>Investimentos</span></button>
+      <button class="nav-item" data-page="guild"><span class="nav-icon">🛡️</span><span>Guilda</span></button>
+      <button class="nav-item" data-page="events"><span class="nav-icon">⏱️</span><span>Eventos</span></button>
+      <button class="nav-item" data-page="market"><span class="nav-icon">💰</span><span>Mercado</span></button>
+      <button class="nav-item" data-page="calculators"><span class="nav-icon">🧮</span><span>Calculadoras</span></button>
+      <button class="nav-item" data-page="goals"><span class="nav-icon">🎯</span><span>Metas</span></button>
+      <button class="nav-item" data-page="wiki"><span class="nav-icon">📖</span><span>Wiki</span></button>
+      <button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span>Configurações</span></button>
+    </nav>
 
-        <button class="nav-item active" data-page="dashboard">
-          <span class="nav-icon">⌂</span>
-          <span>Início</span>
-        </button>
+    <div class="sidebar-quote">
+      <span>“Disciplina hoje.</span>
+      <strong>Grandes resultados amanhã.”</strong>
+    </div>
+  </aside>
 
-        <button class="nav-item" data-page="account">
-          <span class="nav-icon">👤</span>
-          <span>Minha Conta</span>
-        </button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <button class="nav-item" data-page="shop">
-          <span class="nav-icon">🏪</span>
-          <span>Minha Loja</span>
-        </button>
-
-        <button class="nav-item" data-page="crafting">
-          <span class="nav-icon">🔨</span>
-          <span>Fabricação</span>
-        </button>
-
-        <button class="nav-item" data-page="heroes">
-          <span class="nav-icon">⚔️</span>
-          <span>Heróis</span>
-        </button>
-
-        <button class="nav-item" data-page="champions">
-          <span class="nav-icon">🏆</span>
-          <span>Campeões</span>
-        </button>
-
-        <button class="nav-item" data-page="investments">
-          <span class="nav-icon">🏛️</span>
-          <span>Investimentos</span>
-        </button>
-
-        <button class="nav-item" data-page="guild">
-          <span class="nav-icon">🛡️</span>
-          <span>Guilda</span>
-        </button>
-
-        <button class="nav-item" data-page="events">
-          <span class="nav-icon">⏱️</span>
-          <span>Eventos</span>
-        </button>
-
-        <button class="nav-item" data-page="market">
-          <span class="nav-icon">💰</span>
-          <span>Mercado</span>
-        </button>
-
-        <button class="nav-item" data-page="calculators">
-          <span class="nav-icon">🧮</span>
-          <span>Calculadoras</span>
-        </button>
-
-        <button class="nav-item" data-page="goals">
-          <span class="nav-icon">🎯</span>
-          <span>Metas</span>
-        </button>
-
-        <button class="nav-item" data-page="wiki">
-          <span class="nav-icon">📖</span>
-          <span>Wiki</span>
-        </button>
-
-        <button class="nav-item" data-page="settings">
-          <span class="nav-icon">⚙️</span>
-          <span>Configurações</span>
-        </button>
-
-      </nav>
-
-      <div class="sidebar-quote">
-        <span>“Disciplina hoje.</span>
-        <strong>Grandes resultados amanhã.”</strong>
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-button" id="menuButton" aria-label="Abrir menu">☰</button>
+      <div class="topbar-title">
+        <span>TITANPATH</span>
+        <small>Shop Titans Companion</small>
       </div>
-
-    </aside>
-
-
-    <!-- ======================================================
-         OVERLAY MOBILE
-    ======================================================= -->
-
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-
-    <!-- ======================================================
-         MAIN AREA
-    ======================================================= -->
-
-    <main class="main">
-
-      <!-- ====================================================
-           HEADER
-      ===================================================== -->
-
-      <header class="topbar">
-
-        <button
-          class="menu-button"
-          id="menuButton"
-          aria-label="Abrir menu"
-        >
-          ☰
-        </button>
-
-        <div class="topbar-title">
-          <span>TITANPATH</span>
-          <small>Shop Titans Companion</small>
-        </div>
-
-        <div class="topbar-actions">
-
-          <button class="icon-button" title="Notificações">
-            🔔
-          </button>
-
-          <button class="profile-button">
-            <span class="profile-avatar">T</span>
-          </button>
-
-        </div>
-
-      </header>
-
-
-      <!-- ====================================================
-           CONTENT
-      ===================================================== -->
-
-      <div class="content">
-
-
-        <!-- ==================================================
-             DASHBOARD PAGE
-        =================================================== -->
-
-        <section class="page active" id="page-dashboard">
-
-          <!-- HERO -->
-
-          <section class="hero-banner">
-
-            <div class="hero-overlay"></div>
-
-            <div class="hero-content">
-
-              <span class="hero-label">
-                SUA JORNADA
-              </span>
-
-              <h2>
-                Construa seu
-                <span>império.</span>
-              </h2>
-
-              <p>
-                Planeje sua conta, evolua com inteligência e
-                transforme cada moeda em progresso.
-              </p>
-
-            </div>
-
-          </section>
-
-
-          <!-- ==================================================
-               ACCOUNT SUMMARY
-          =================================================== -->
-
-          <section class="dashboard-grid">
-
-            <article class="panel account-summary">
-
-              <div class="panel-heading">
-
-                <div>
-                  <span class="eyebrow">
-                    RESUMO DA CONTA
-                  </span>
-
-                  <h3>
-                    Mercador nível
-                    <strong id="merchantLevel">22</strong>
-                  </h3>
-                </div>
-
-                <div class="level-badge">
-                  22
-                </div>
-
-              </div>
-
-
-              <div class="xp-area">
-
-                <div class="xp-top">
-                  <span>Experiência</span>
-                  <span id="xpText">3.250 / 5.000 XP</span>
-                </div>
-
-                <div class="progress-track">
-                  <div
-                    class="progress-fill"
-                    id="xpBar"
-                    style="width: 65%;"
-                  ></div>
-                </div>
-
-              </div>
-
-
-              <div class="stats-grid">
-
-                <div class="stat-card">
-
-                  <div class="stat-icon gold">
-                    🪙
-                  </div>
-
-                  <div>
-                    <strong id="goldValue">
-                      2.400.000
-                    </strong>
-                    <span>Ouro</span>
-                  </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                  <div class="stat-icon diamond">
-                    💎
-                  </div>
-
-                  <div>
-                    <strong id="gemsValue">
-                      630
-                    </strong>
-                    <span>Gemas</span>
-                  </div>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                  <div class="stat-icon energy">
-                    ⚡
-                  </div>
-
-                  <div>
-                    <strong id="energyValue">
-                      173
-                    </strong>
-                    <span>Energia</span>
-                  </div>
-
-                </div>
-
-              </div>
-
-            </article>
-
-
-            <!-- QUICK STATS -->
-
-            <div class="quick-stats">
-
-              <article class="panel quick-card">
-
-                <div class="quick-icon">
-                  📦
-                </div>
-
-                <div>
-                  <span>Espaços da Loja</span>
-
-                  <strong>
-                    <span id="shopUsedSlots">24</span>
-                    /
-                    <span id="shopTotalSlots">24</span>
-                  </strong>
-
-                  <div class="mini-progress">
-                    <div
-                      class="mini-progress-bar"
-                      id="shopSlotsBar"
-                      style="width: 100%;"
-                    ></div>
-                  </div>
-
-                </div>
-
-              </article>
-
-
-              <article class="panel quick-card">
-
-                <div class="quick-icon">
-                  🏛️
-                </div>
-
-                <div>
-                  <span>Investimentos</span>
-
-                  <strong id="investmentValue">
-                    0
-                  </strong>
-
-                  <small>Total registrado</small>
-                </div>
-
-              </article>
-
-
-              <article class="panel quick-card">
-
-                <div class="quick-icon">
-                  🛡️
-                </div>
-
-                <div>
-                  <span>Guilda</span>
-
-                  <strong id="guildName">
-                    Não cadastrada
-                  </strong>
-
-                  <small id="guildStatus">
-                    Atualize seus dados
-                  </small>
-                </div>
-
-              </article>
-
-
-              <article class="panel quick-card">
-
-                <div class="quick-icon">
-                  ⚔️
-                </div>
-
-                <div>
-                  <span>Heróis</span>
-
-                  <strong>
-                    <span id="activeHeroes">0</span>
-                    /
-                    <span id="heroSlots">0</span>
-                  </strong>
-
-                  <small>Ativos</small>
-                </div>
-
-              </article>
-
-            </div>
-
-          </section>
-
-
-          <!-- ==================================================
-               NEXT ACTION
-          =================================================== -->
-
-          <section class="panel mission-panel">
-
-            <div class="mission-main">
-
-              <div class="section-heading">
-
-                <div>
-                  <span class="eyebrow gold-text">
-                    🎯 O QUE FAZER AGORA?
-                  </span>
-
-                  <h3 id="currentMissionTitle">
-                    Aumentar sua energia
-                  </h3>
-                </div>
-
-              </div>
-
-
-              <div class="next-step-box">
-
-                <span class="next-step-label">
-                  PRÓXIMO PASSO
-                </span>
-
-                <h4 id="nextStepTitle">
-                  Melhore seus expositores do nível 3 para 4
-                </h4>
-
-                <p id="nextStepDescription">
-                  Aumentar sua energia permitirá usar Sobretaxa
-                  em itens mais valiosos e melhorar suas vendas
-                  dentro da loja.
-                </p>
-
-
-                <button class="primary-button">
-                  VER PASSO A PASSO
-                  <span>→</span>
-                </button>
-
-              </div>
-
-            </div>
-
-
-            <div class="mission-progress">
-
-              <span class="mission-progress-title">
-                Progresso da Meta
-              </span>
-
-              <div class="circle-progress">
-
-                <div class="circle-inner">
-                  <strong id="missionProgressValue">
-                    69%
-                  </strong>
-                </div>
-
-              </div>
-
-              <div class="mission-target">
-
-                <span>Meta atual</span>
-
-                <strong>
-                  250 de energia
-                </strong>
-
-              </div>
-
-
-              <div class="checklist">
-
-                <label class="check-item done">
-                  <input type="checkbox" checked disabled />
-                  <span>12 expositores instalados</span>
-                </label>
-
-                <label class="check-item done">
-                  <input type="checkbox" checked disabled />
-                  <span>Energia em 173</span>
-                </label>
-
-                <label class="check-item">
-                  <input type="checkbox" disabled />
-                  <span>Melhorar expositores</span>
-                </label>
-
-                <label class="check-item">
-                  <input type="checkbox" disabled />
-                  <span>Manter reserva de ouro</span>
-                </label>
-
-                <label class="check-item">
-                  <input type="checkbox" disabled />
-                  <span>Chegar a 250 ⚡</span>
-                </label>
-
-              </div>
-
-            </div>
-
-          </section>
-
-
-          <!-- ==================================================
-               MODULE CARDS
-          =================================================== -->
-
-          <section class="modules-grid">
-
-            <button class="module-card" data-go="shop">
-              <div class="module-image">
-                🏪
-              </div>
-
-              <div class="module-content">
-                <h4>Minha Loja</h4>
-                <p>Organize móveis e aumente sua energia.</p>
-              </div>
-            </button>
-
-
-            <button class="module-card" data-go="crafting">
-              <div class="module-image">
-                🔨
-              </div>
-
-              <div class="module-content">
-                <h4>Fabricação</h4>
-                <p>Planeje projetos, recursos e maestrias.</p>
-              </div>
-            </button>
-
-
-            <button class="module-card" data-go="heroes">
-              <div class="module-image">
-                ⚔️
-              </div>
-
-              <div class="module-content">
-                <h4>Heróis</h4>
-                <p>Gerencie e evolua sua equipe.</p>
-              </div>
-            </button>
-
-
-            <button class="module-card" data-go="champions">
-              <div class="module-image">
-                🏆
-              </div>
-
-              <div class="module-content">
-                <h4>Campeões</h4>
-                <p>Controle níveis e prioridades.</p>
-              </div>
-            </button>
-
-
-            <button class="module-card" data-go="investments">
-              <div class="module-image">
-                🏛️
-              </div>
-
-              <div class="module-content">
-                <h4>Investimentos</h4>
-                <p>Cidade, prédios e planejamento.</p>
-              </div>
-            </button>
-
-
-            <button class="module-card" data-go="events">
-              <div class="module-image">
-                🎪
-              </div>
-
-              <div class="module-content">
-                <h4>Eventos</h4>
-                <p>Prepare sua conta para cada evento.</p>
-              </div>
-            </button>
-
-          </section>
-
-
-          <!-- ==================================================
-               SECONDARY GRID
-          =================================================== -->
-
-          <section class="secondary-grid">
-
-
-            <!-- EVENTS -->
-
-            <article class="panel">
-
-              <div class="panel-heading">
-                <h3>Eventos</h3>
-
-                <button
-                  class="text-button"
-                  data-go="events"
-                >
-                  Ver todos
-                </button>
-              </div>
-
-
-              <div class="event-featured">
-
-                <div class="event-icon">
-                  🐉
-                </div>
-
-                <div>
-                  <span>Evento em andamento</span>
-                  <strong>Cadastre o evento atual</strong>
-                  <small>
-                    O TitanPath preparará um checklist.
-                  </small>
-                </div>
-
-              </div>
-
-
-              <div class="event-list">
-
-                <div class="event-item">
-                  <span class="event-symbol">👑</span>
-
-                  <div>
-                    <strong>King's Caprice</strong>
-                    <small>Planejamento de fabricação</small>
-                  </div>
-                </div>
-
-
-                <div class="event-item">
-                  <span class="event-symbol">🏰</span>
-
-                  <div>
-                    <strong>Lost City of Gold</strong>
-                    <small>Equipe e missões</small>
-                  </div>
-                </div>
-
-
-                <div class="event-item">
-                  <span class="event-symbol">🗼</span>
-
-                  <div>
-                    <strong>Tower of Titans</strong>
-                    <small>Preparação de heróis</small>
-                  </div>
-                </div>
-
-              </div>
-
-            </article>
-
-
-            <!-- GOLD PLANNER -->
-
-            <article class="panel">
-
-              <div class="panel-heading">
-                <h3>Planejador de Ouro</h3>
-              </div>
-
-
-              <div class="gold-total">
-
-                <span>Patrimônio atual</span>
-
-                <strong id="plannerGoldValue">
-                  2.400.000
-                </strong>
-
-              </div>
-
-
-              <div class="budget-list">
-
-                <div class="budget-row">
-
-                  <div>
-                    <span class="budget-dot"></span>
-                    Loja
-                  </div>
-
-                  <strong>40%</strong>
-
-                </div>
-
-
-                <div class="budget-row">
-
-                  <div>
-                    <span class="budget-dot"></span>
-                    Investimentos
-                  </div>
-
-                  <strong>25%</strong>
-
-                </div>
-
-
-                <div class="budget-row">
-
-                  <div>
-                    <span class="budget-dot"></span>
-                    Heróis
-                  </div>
-
-                  <strong>10%</strong>
-
-                </div>
-
-
-                <div class="budget-row">
-
-                  <div>
-                    <span class="budget-dot"></span>
-                    Produção
-                  </div>
-
-                  <strong>10%</strong>
-
-                </div>
-
-
-                <div class="budget-row">
-
-                  <div>
-                    <span class="budget-dot"></span>
-                    Reserva
-                  </div>
-
-                  <strong>15%</strong>
-
-                </div>
-
-              </div>
-
-            </article>
-
-
-            <!-- QUICK TIPS -->
-
-            <article class="panel">
-
-              <div class="panel-heading">
-                <h3>Dicas Rápidas</h3>
-              </div>
-
-
-              <ul class="tips-list">
-
-                <li>
-                  Mantenha seus slots de fabricação trabalhando.
-                </li>
-
-                <li>
-                  Gere energia antes de sobretaxar itens caros.
-                </li>
-
-                <li>
-                  Evite gastar gemas sem planejamento.
-                </li>
-
-                <li>
-                  Invista na cidade sem comprometer todo o caixa.
-                </li>
-
-                <li>
-                  Priorize progressão antes de decoração.
-                </li>
-
-              </ul>
-
-            </article>
-
-          </section>
-
-
-          <!-- ==================================================
-               ACCOUNT EVOLUTION
-          =================================================== -->
-
-          <section class="panel evolution-panel">
-
+      <div class="topbar-actions">
+        <button class="icon-button" title="Notificações">🔔</button>
+        <button class="profile-button"><span class="profile-avatar">T</span></button>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="page active" id="page-dashboard">
+        <section class="hero-banner">
+          <div class="hero-overlay"></div>
+          <div class="hero-content">
+            <span class="hero-label">SUA JORNADA</span>
+            <h2>Construa seu <span>império.</span></h2>
+            <p>Planeje sua conta, evolua com inteligência e transforme cada moeda em progresso.</p>
+          </div>
+        </section>
+
+        <section class="dashboard-grid">
+          <article class="panel account-summary">
             <div class="panel-heading">
-
               <div>
-                <span class="eyebrow">
-                  EVOLUÇÃO DA CONTA
-                </span>
-
-                <h3>
-                  Seu progresso
-                </h3>
+                <span class="eyebrow">RESUMO DA CONTA</span>
+                <h3>Mercador nível <strong id="merchantLevel">22</strong></h3>
               </div>
-
+              <div class="level-badge">22</div>
             </div>
 
-
-            <div class="evolution-grid">
-
-              <div class="evolution-card">
-
-                <span>Energia inicial</span>
-                <strong>95 ⚡</strong>
-
-              </div>
-
-
-              <div class="evolution-arrow">
-                →
-              </div>
-
-
-              <div class="evolution-card">
-
-                <span>Segunda etapa</span>
-                <strong>107 ⚡</strong>
-
-              </div>
-
-
-              <div class="evolution-arrow">
-                →
-              </div>
-
-
-              <div class="evolution-card highlight">
-
-                <span>Energia atual</span>
-                <strong>173 ⚡</strong>
-
-              </div>
-
-
-              <div class="evolution-arrow">
-                →
-              </div>
-
-
-              <div class="evolution-card target">
-
-                <span>Próxima meta</span>
-                <strong>250 ⚡</strong>
-
-              </div>
-
+            <div class="xp-area">
+              <div class="xp-top"><span>Experiência</span><span id="xpText">3.250 / 5.000 XP</span></div>
+              <div class="progress-track"><div class="progress-fill" id="xpBar" style="width:65%;"></div></div>
             </div>
 
-          </section>
-
-
-          <!-- ==================================================
-               MAIN GOALS
-          =================================================== -->
-
-          <section class="panel goals-panel">
-
-            <div class="panel-heading">
-
-              <div>
-                <span class="eyebrow">
-                  ROADMAP
-                </span>
-
-                <h3>
-                  Metas principais
-                </h3>
-              </div>
-
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-icon gold">🪙</div><div><strong id="goldValue">2.400.000</strong><span>Ouro</span></div></div>
+              <div class="stat-card"><div class="stat-icon diamond">💎</div><div><strong id="gemsValue">630</strong><span>Gemas</span></div></div>
+              <div class="stat-card"><div class="stat-icon energy">⚡</div><div><strong id="energyValue">173</strong><span>Energia</span></div></div>
             </div>
+          </article>
 
+          <div class="quick-stats">
+            <article class="panel quick-card"><div class="quick-icon">📦</div><div><span>Espaços da Loja</span><strong><span id="shopUsedSlots">24</span> / <span id="shopTotalSlots">24</span></strong><div class="mini-progress"><div class="mini-progress-bar" id="shopSlotsBar" style="width:100%;"></div></div></div></article>
+            <article class="panel quick-card"><div class="quick-icon">🏛️</div><div><span>Investimentos</span><strong id="investmentValue">0</strong><small>Total registrado</small></div></article>
+            <article class="panel quick-card"><div class="quick-icon">🛡️</div><div><span>Guilda</span><strong id="guildName">Não cadastrada</strong><small id="guildStatus">Atualize seus dados</small></div></article>
+            <article class="panel quick-card"><div class="quick-icon">⚔️</div><div><span>Heróis</span><strong><span id="activeHeroes">0</span> / <span id="heroSlots">0</span></strong><small>Ativos</small></div></article>
+          </div>
+        </section>
 
-            <div class="goal-list">
-
-
-              <div class="goal-row">
-
-                <div class="goal-info">
-
-                  <span class="goal-icon">
-                    ⚡
-                  </span>
-
-                  <div>
-                    <strong>250 de energia</strong>
-                    <small>173 / 250</small>
-                  </div>
-
-                </div>
-
-                <div class="goal-progress">
-
-                  <div class="progress-track">
-                    <div
-                      class="progress-fill"
-                      style="width: 69%;"
-                    ></div>
-                  </div>
-
-                  <span>69%</span>
-
-                </div>
-
-              </div>
-
-
-              <div class="goal-row">
-
-                <div class="goal-info">
-
-                  <span class="goal-icon">
-                    XP
-                  </span>
-
-                  <div>
-                    <strong>Nível 25</strong>
-                    <small>Mercador nível 22</small>
-                  </div>
-
-                </div>
-
-                <div class="goal-progress">
-
-                  <div class="progress-track">
-                    <div
-                      class="progress-fill"
-                      style="width: 30%;"
-                    ></div>
-                  </div>
-
-                  <span>30%</span>
-
-                </div>
-
-              </div>
-
-
-              <div class="goal-row">
-
-                <div class="goal-info">
-
-                  <span class="goal-icon">
-                    🪙
-                  </span>
-
-                  <div>
-                    <strong>5 milhões de ouro</strong>
-                    <small>2,4M / 5M</small>
-                  </div>
-
-                </div>
-
-                <div class="goal-progress">
-
-                  <div class="progress-track">
-                    <div
-                      class="progress-fill"
-                      style="width: 48%;"
-                    ></div>
-                  </div>
-
-                  <span>48%</span>
-
-                </div>
-
-              </div>
-
-
-              <div class="goal-row">
-
-                <div class="goal-info">
-
-                  <span class="goal-icon">
-                    ★
-                  </span>
-
-                  <div>
-                    <strong>Nível 30</strong>
-                    <small>Objetivo principal</small>
-                  </div>
-
-                </div>
-
-                <div class="goal-progress">
-
-                  <div class="progress-track">
-                    <div
-                      class="progress-fill"
-                      style="width: 0%;"
-                    ></div>
-                  </div>
-
-                  <span>0%</span>
-
-                </div>
-
-              </div>
-
+        <section class="panel mission-panel">
+          <div class="mission-main">
+            <div class="section-heading"><div><span class="eyebrow gold-text">🎯 O QUE FAZER AGORA?</span><h3 id="currentMissionTitle">Aumentar sua energia</h3></div></div>
+            <div class="next-step-box">
+              <span class="next-step-label">PRÓXIMO PASSO</span>
+              <h4 id="nextStepTitle">Melhore seus expositores do nível 3 para 4</h4>
+              <p id="nextStepDescription">Aumentar sua energia permitirá usar Sobretaxa em itens mais valiosos e melhorar suas vendas dentro da loja.</p>
+              <button class="primary-button">VER PASSO A PASSO <span>→</span></button>
             </div>
-
-          </section>
-
-        </section>
-
-
-        <!-- ==================================================
-             PLACEHOLDER PAGES
-        =================================================== -->
-
-        <section class="page" id="page-account">
-
-          <div class="page-placeholder">
-            <span>👤</span>
-            <h2>Minha Conta</h2>
-            <p>
-              Seus dados gerais serão configurados aqui.
-            </p>
           </div>
-
-        </section>
-
-
-        <section class="page" id="page-shop">
-
-          <div class="page-placeholder">
-            <span>🏪</span>
-            <h2>Minha Loja</h2>
-            <p>
-              Móveis, energia, recipientes, baús e espaços.
-            </p>
+          <div class="mission-progress">
+            <span class="mission-progress-title">Progresso da Meta</span>
+            <div class="circle-progress"><div class="circle-inner"><strong id="missionProgressValue">69%</strong></div></div>
+            <div class="mission-target"><span>Meta atual</span><strong>250 de energia</strong></div>
+            <div class="checklist">
+              <label class="check-item done"><input type="checkbox" checked disabled><span>12 expositores instalados</span></label>
+              <label class="check-item done"><input type="checkbox" checked disabled><span>Energia em 173</span></label>
+              <label class="check-item"><input type="checkbox" disabled><span>Melhorar expositores</span></label>
+              <label class="check-item"><input type="checkbox" disabled><span>Manter reserva de ouro</span></label>
+              <label class="check-item"><input type="checkbox" disabled><span>Chegar a 250 ⚡</span></label>
+            </div>
           </div>
-
         </section>
 
+        <section class="modules-grid">
+          <button class="module-card" data-go="shop"><div class="module-image">🏪</div><div class="module-content"><h4>Minha Loja</h4><p>Organize móveis e aumente sua energia.</p></div></button>
+          <button class="module-card" data-go="crafting"><div class="module-image">🔨</div><div class="module-content"><h4>Fabricação</h4><p>Planeje projetos, recursos e maestrias.</p></div></button>
+          <button class="module-card" data-go="heroes"><div class="module-image">⚔️</div><div class="module-content"><h4>Heróis</h4><p>Gerencie e evolua sua equipe.</p></div></button>
+          <button class="module-card" data-go="champions"><div class="module-image">🏆</div><div class="module-content"><h4>Campeões</h4><p>Controle níveis e prioridades.</p></div></button>
+          <button class="module-card" data-go="investments"><div class="module-image">🏛️</div><div class="module-content"><h4>Investimentos</h4><p>Cidade, prédios e planejamento.</p></div></button>
+          <button class="module-card" data-go="events"><div class="module-image">🎪</div><div class="module-content"><h4>Eventos</h4><p>Prepare sua conta para cada evento.</p></div></button>
+        </section>
 
-        <section class="page" id="page-crafting">
+        <section class="secondary-grid">
+          <article class="panel"><div class="panel-heading"><h3>Eventos</h3><button class="text-button" data-go="events">Ver todos</button></div><div class="event-featured"><div class="event-icon">🐉</div><div><span>Evento em andamento</span><strong>Cadastre o evento atual</strong><small>O TitanPath preparará um checklist.</small></div></div><div class="event-list"><div class="event-item"><span class="event-symbol">👑</span><div><strong>King's Caprice</strong><small>Planejamento de fabricação</small></div></div><div class="event-item"><span class="event-symbol">🏰</span><div><strong>Lost City of Gold</strong><small>Equipe e missões</small></div></div><div class="event-item"><span class="event-symbol">🗼</span><div><strong>Tower of Titans</strong><small>Preparação de heróis</small></div></div></div></article>
+          <article class="panel"><div class="panel-heading"><h3>Planejador de Ouro</h3></div><div class="gold-total"><span>Patrimônio atual</span><strong id="plannerGoldValue">2.400.000</strong></div><div class="budget-list"><div class="budget-row"><div><span class="budget-dot"></span>Loja</div><strong>40%</strong></div><div class="budget-row"><div><span class="budget-dot"></span>Investimentos</div><strong>25%</strong></div><div class="budget-row"><div><span class="budget-dot"></span>Heróis</div><strong>10%</strong></div><div class="budget-row"><div><span class="budget-dot"></span>Produção</div><strong>10%</strong></div><div class="budget-row"><div><span class="budget-dot"></span>Reserva</div><strong>15%</strong></div></div></article>
+          <article class="panel"><div class="panel-heading"><h3>Dicas Rápidas</h3></div><ul class="tips-list"><li>Mantenha seus slots de fabricação trabalhando.</li><li>Gere energia antes de sobretaxar itens caros.</li><li>Evite gastar gemas sem planejamento.</li><li>Invista na cidade sem comprometer todo o caixa.</li><li>Priorize progressão antes de decoração.</li></ul></article>
+        </section>
 
-          <div class="page-placeholder">
-            <span>🔨</span>
-            <h2>Fabricação</h2>
-            <p>
-              Projetos, recursos e planejamento de produção.
-            </p>
+        <section class="panel evolution-panel"><div class="panel-heading"><div><span class="eyebrow">EVOLUÇÃO DA CONTA</span><h3>Seu progresso</h3></div></div><div class="evolution-grid"><div class="evolution-card"><span>Energia inicial</span><strong>95 ⚡</strong></div><div class="evolution-arrow">→</div><div class="evolution-card"><span>Segunda etapa</span><strong>107 ⚡</strong></div><div class="evolution-arrow">→</div><div class="evolution-card highlight"><span>Energia atual</span><strong>173 ⚡</strong></div><div class="evolution-arrow">→</div><div class="evolution-card target"><span>Próxima meta</span><strong>250 ⚡</strong></div></div></section>
+
+        <section class="panel goals-panel"><div class="panel-heading"><div><span class="eyebrow">ROADMAP</span><h3>Metas principais</h3></div></div><div class="goal-list"><div class="goal-row"><div class="goal-info"><span class="goal-icon">⚡</span><div><strong>250 de energia</strong><small>173 / 250</small></div></div><div class="goal-progress"><div class="progress-track"><div class="progress-fill" style="width:69%;"></div></div><span>69%</span></div></div><div class="goal-row"><div class="goal-info"><span class="goal-icon">XP</span><div><strong>Nível 25</strong><small>Mercador nível 22</small></div></div><div class="goal-progress"><div class="progress-track"><div class="progress-fill" style="width:30%;"></div></div><span>30%</span></div></div><div class="goal-row"><div class="goal-info"><span class="goal-icon">🪙</span><div><strong>5 milhões de ouro</strong><small>2,4M / 5M</small></div></div><div class="goal-progress"><div class="progress-track"><div class="progress-fill" style="width:48%;"></div></div><span>48%</span></div></div><div class="goal-row"><div class="goal-info"><span class="goal-icon">★</span><div><strong>Nível 30</strong><small>Objetivo principal</small></div></div><div class="goal-progress"><div class="progress-track"><div class="progress-fill" style="width:0%;"></div></div><span>0%</span></div></div></div></section>
+      </section>
+
+      <section class="page" id="page-account"><div class="page-placeholder"><span>👤</span><h2>Minha Conta</h2><p>Seus dados gerais serão configurados aqui.</p></div></section>
+
+      <section class="page" id="page-shop">
+        <section class="shop-hero panel">
+          <div>
+            <span class="eyebrow gold-text">🏪 MINHA LOJA</span>
+            <h2>Central de gerenciamento</h2>
+            <p>Controle seus 24 espaços, móveis, energia, armazenamento e recursos em um único lugar.</p>
           </div>
-
+          <button class="primary-button" id="editShopButton">✏️ EDITAR LOJA</button>
         </section>
 
+        <section class="shop-summary-grid">
+          <article class="panel shop-summary-card"><span>⚡ Energia atual</span><strong id="shopEnergyValue">173</strong><small>Meta atual: 250</small></article>
+          <article class="panel shop-summary-card"><span>🪑 Expositores</span><strong id="shopRackCount">12</strong><small>Móveis que geram energia</small></article>
+          <article class="panel shop-summary-card"><span>📦 Espaços usados</span><strong><span id="shopPageUsedSlots">24</span>/<span id="shopPageTotalSlots">24</span></strong><small id="shopFreeSlotsText">0 espaços livres</small></article>
+          <article class="panel shop-summary-card"><span>🧰 Armazenamento</span><strong id="shopChestCount">3</strong><small>Baús cadastrados</small></article>
+        </section>
 
-        <section class="page" id="page-heroes">
+        <section class="panel shop-slots-panel">
+          <div class="panel-heading"><div><span class="eyebrow">OCUPAÇÃO DA LOJA</span><h3>24 espaços disponíveis</h3></div><span class="shop-slot-counter"><strong id="shopSlotCounterUsed">24</strong>/24</span></div>
+          <div class="progress-track shop-space-progress"><div class="progress-fill" id="shopSpaceBar" style="width:100%;"></div></div>
+          <div class="shop-slot-legend"><span>🪑 Expositores: <strong id="legendRackCount">12</strong></span><span>🪵 Recursos: <strong id="legendBinCount">8</strong></span><span>📦 Baús: <strong id="legendChestCount">3</strong></span><span>🧑‍💼 Balcão: <strong>1</strong></span></div>
+        </section>
 
-          <div class="page-placeholder">
-            <span>⚔️</span>
-            <h2>Heróis</h2>
-            <p>
-              Gerenciamento dos seus heróis.
-            </p>
+        <section class="shop-section">
+          <div class="panel-heading shop-section-heading"><div><span class="eyebrow gold-text">⚡ ENERGIA</span><h3>Expositores</h3></div><span class="shop-section-note">Meta inicial: 250 ⚡</span></div>
+          <div class="furniture-grid" id="rackGrid">
+            <article class="panel furniture-card"><div class="furniture-icon">👕</div><div class="furniture-info"><span>Manequim</span><strong>3 unidades</strong><small>Nível médio: 3</small></div><span class="priority-badge high">ALTA</span></article>
+            <article class="panel furniture-card"><div class="furniture-icon">🪵</div><div class="furniture-info"><span>Mesa</span><strong>3 unidades</strong><small>Nível médio: 3</small></div><span class="priority-badge high">ALTA</span></article>
+            <article class="panel furniture-card"><div class="furniture-icon">🗄️</div><div class="furniture-info"><span>Prateleira</span><strong>3 unidades</strong><small>Nível médio: 3</small></div><span class="priority-badge high">ALTA</span></article>
+            <article class="panel furniture-card"><div class="furniture-icon">⚔️</div><div class="furniture-info"><span>Expositor Vertical</span><strong>3 unidades</strong><small>Nível médio: 3</small></div><span class="priority-badge high">ALTA</span></article>
           </div>
-
         </section>
 
-
-        <section class="page" id="page-champions">
-
-          <div class="page-placeholder">
-            <span>🏆</span>
-            <h2>Campeões</h2>
-            <p>
-              Evolução e prioridades dos seus campeões.
-            </p>
+        <section class="shop-section">
+          <div class="panel-heading shop-section-heading"><div><span class="eyebrow">🔨 PRODUÇÃO</span><h3>Recipientes de recursos</h3></div><span class="shop-section-note">Ajuste conforme sua fabricação</span></div>
+          <div class="furniture-grid" id="binGrid">
+            <article class="panel furniture-card"><div class="furniture-icon">🪵</div><div class="furniture-info"><span>Madeira</span><strong>2 recipientes</strong><small>Nível configurável</small></div><span class="priority-badge medium">MÉDIA</span></article>
+            <article class="panel furniture-card"><div class="furniture-icon">⛓️</div><div class="furniture-info"><span>Ferro</span><strong>2 recipientes</strong><small>Nível configurável</small></div><span class="priority-badge medium">MÉDIA</span></article>
+            <article class="panel furniture-card"><div class="furniture-icon">🟫</div><div class="furniture-info"><span>Couro</span><strong>2 recipientes</strong><small>Nível configurável</small></div><span class="priority-badge medium">MÉDIA</span></article>
+            <article class="panel furniture-card"><div class="furniture-icon">🌿</div><div class="furniture-info"><span>Ervas</span><strong>2 recipientes</strong><small>Nível configurável</small></div><span class="priority-badge medium">MÉDIA</span></article>
           </div>
-
         </section>
 
-
-        <section class="page" id="page-investments">
-
-          <div class="page-placeholder">
-            <span>🏛️</span>
-            <h2>Investimentos</h2>
-            <p>
-              Controle seus investimentos na cidade.
-            </p>
+        <section class="shop-section">
+          <div class="panel-heading shop-section-heading"><div><span class="eyebrow">📦 ARMAZENAMENTO</span><h3>Baús e balcão</h3></div></div>
+          <div class="furniture-grid">
+            <article class="panel furniture-card"><div class="furniture-icon">📦</div><div class="furniture-info"><span>Baús</span><strong>3 unidades</strong><small>Nível atual: 2</small></div><span class="priority-badge low">BAIXA</span></article>
+            <article class="panel furniture-card"><div class="furniture-icon">🧑‍💼</div><div class="furniture-info"><span>Balcão</span><strong>1 unidade</strong><small>Nível atual: 3</small></div><span class="priority-badge medium">MÉDIA</span></article>
           </div>
-
         </section>
 
-
-        <section class="page" id="page-guild">
-
-          <div class="page-placeholder">
-            <span>🛡️</span>
-            <h2>Guilda</h2>
-            <p>
-              Atividade, investimentos e desempenho da guilda.
-            </p>
-          </div>
-
+        <section class="panel shop-advisor">
+          <div class="shop-advisor-icon">🧠</div>
+          <div><span class="eyebrow gold-text">TITAN ADVISOR</span><h3>Recomendação atual</h3><p id="shopAdvisorText">Sua energia está em 173. Priorize evoluir os expositores antes de aumentar o número de baús. Pare para reavaliar quando alcançar aproximadamente 250 de energia.</p></div>
         </section>
+      </section>
 
+      <section class="page" id="page-crafting"><div class="page-placeholder"><span>🔨</span><h2>Fabricação</h2><p>Projetos, recursos e planejamento de produção.</p></div></section>
+      <section class="page" id="page-heroes"><div class="page-placeholder"><span>⚔️</span><h2>Heróis</h2><p>Gerenciamento dos seus heróis.</p></div></section>
+      <section class="page" id="page-champions"><div class="page-placeholder"><span>🏆</span><h2>Campeões</h2><p>Evolução e prioridades dos seus campeões.</p></div></section>
+      <section class="page" id="page-investments"><div class="page-placeholder"><span>🏛️</span><h2>Investimentos</h2><p>Controle seus investimentos na cidade.</p></div></section>
+      <section class="page" id="page-guild"><div class="page-placeholder"><span>🛡️</span><h2>Guilda</h2><p>Atividade, investimentos e desempenho da guilda.</p></div></section>
+      <section class="page" id="page-events"><div class="page-placeholder"><span>🎪</span><h2>Eventos</h2><p>Guias e preparação para os eventos do Shop Titans.</p></div></section>
+      <section class="page" id="page-market"><div class="page-placeholder"><span>💰</span><h2>Mercado</h2><p>Estratégias de compra e venda.</p></div></section>
+      <section class="page" id="page-calculators"><div class="page-placeholder"><span>🧮</span><h2>Calculadoras</h2><p>Energia, sobretaxa, ouro e outros cálculos.</p></div></section>
+      <section class="page" id="page-goals"><div class="page-placeholder"><span>🎯</span><h2>Metas</h2><p>Seu roadmap completo de evolução.</p></div></section>
+      <section class="page" id="page-wiki"><div class="page-placeholder"><span>📖</span><h2>Wiki</h2><p>Sua biblioteca pessoal de Shop Titans.</p></div></section>
+      <section class="page" id="page-settings"><div class="page-placeholder"><span>⚙️</span><h2>Configurações</h2><p>Preferências e gerenciamento do TitanPath.</p></div></section>
+    </div>
 
-        <section class="page" id="page-events">
-
-          <div class="page-placeholder">
-            <span>🎪</span>
-            <h2>Eventos</h2>
-            <p>
-              Guias e preparação para os eventos do Shop Titans.
-            </p>
-          </div>
-
-        </section>
-
-
-        <section class="page" id="page-market">
-
-          <div class="page-placeholder">
-            <span>💰</span>
-            <h2>Mercado</h2>
-            <p>
-              Estratégias de compra e venda.
-            </p>
-          </div>
-
-        </section>
-
-
-        <section class="page" id="page-calculators">
-
-          <div class="page-placeholder">
-            <span>🧮</span>
-            <h2>Calculadoras</h2>
-            <p>
-              Energia, sobretaxa, ouro e outros cálculos.
-            </p>
-          </div>
-
-        </section>
-
-
-        <section class="page" id="page-goals">
-
-          <div class="page-placeholder">
-            <span>🎯</span>
-            <h2>Metas</h2>
-            <p>
-              Seu roadmap completo de evolução.
-            </p>
-          </div>
-
-        </section>
-
-
-        <section class="page" id="page-wiki">
-
-          <div class="page-placeholder">
-            <span>📖</span>
-            <h2>Wiki</h2>
-            <p>
-              Sua biblioteca pessoal de Shop Titans.
-            </p>
-          </div>
-
-        </section>
-
-
-        <section class="page" id="page-settings">
-
-          <div class="page-placeholder">
-            <span>⚙️</span>
-            <h2>Configurações</h2>
-            <p>
-              Preferências e gerenciamento do TitanPath.
-            </p>
-          </div>
-
-        </section>
-
-      </div>
-
-
-      <!-- ====================================================
-           MOBILE NAV
-      ===================================================== -->
-
-      <nav class="mobile-nav">
-
-        <button
-          class="mobile-nav-item active"
-          data-page="dashboard"
-        >
-          <span>⌂</span>
-          <small>Início</small>
-        </button>
-
-        <button
-          class="mobile-nav-item"
-          data-page="shop"
-        >
-          <span>🏪</span>
-          <small>Loja</small>
-        </button>
-
-        <button
-          class="mobile-nav-item"
-          data-page="crafting"
-        >
-          <span>🔨</span>
-          <small>Fabricar</small>
-        </button>
-
-        <button
-          class="mobile-nav-item"
-          data-page="goals"
-        >
-          <span>🎯</span>
-          <small>Metas</small>
-        </button>
-
-        <button
-          class="mobile-nav-item"
-          id="mobileMoreButton"
-        >
-          <span>☰</span>
-          <small>Mais</small>
-        </button>
-
-      </nav>
-
-    </main>
-
-  </div>
-
-
-  <!-- ======================================================
-       SCRIPT
-  ======================================================= -->
-
-  <script src="app.js"></script>
-
+    <nav class="mobile-nav">
+      <button class="mobile-nav-item active" data-page="dashboard"><span>⌂</span><small>Início</small></button>
+      <button class="mobile-nav-item" data-page="shop"><span>🏪</span><small>Loja</small></button>
+      <button class="mobile-nav-item" data-page="crafting"><span>🔨</span><small>Fabricar</small></button>
+      <button class="mobile-nav-item" data-page="goals"><span>🎯</span><small>Metas</small></button>
+      <button class="mobile-nav-item" id="mobileMoreButton"><span>☰</span><small>Mais</small></button>
+    </nav>
+  </main>
+</div>
+<script src="app.js"></script>
 </body>
 </html>
