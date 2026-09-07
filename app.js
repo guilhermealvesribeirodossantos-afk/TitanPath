@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.5.1
+   TITANPATH - APP.JS v0.5.2
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -3257,139 +3257,161 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+
 /* =========================================================
-   TITANPATH v0.5.1 — FIX GLOBAL DE SCROLL DOS MODAIS
-   Mantém o conteúdo interno rolável em desktop/iPhone.
+   TITANPATH v0.5.2 — CORREÇÃO REAL DO SCROLL
+   IDs reais: #craftingEditor / #projectEditor / #catalogSearchModal
 ========================================================= */
 (() => {
   const style = document.createElement("style");
-  style.id = "titanpath-modal-scroll-fix-v051";
+  style.id = "titanpath-scroll-fix-v052";
+
   style.textContent = `
-    /* Overlays/modal roots */
-    #craftingConfigModal,
-    #projectModal,
-    #catalogSearchModal,
-    .modal-overlay,
-    .tp-modal-overlay {
+    /* O root continua travando o fundo, mas o CARD controla a rolagem */
+    #craftingEditor,
+    #projectEditor,
+    #catalogSearchModal {
+      overflow: hidden !important;
+    }
+
+    /* FABRICAÇÃO — estrutura flex correta */
+    #craftingEditor .tp-crafting-modal {
+      display: flex !important;
+      flex-direction: column !important;
+      width: min(720px, calc(100vw - 40px)) !important;
+      height: auto !important;
+      max-height: calc(100dvh - 40px) !important;
+      overflow: hidden !important;
+    }
+
+    #craftingEditor .tp-modal-header {
+      flex: 0 0 auto !important;
+    }
+
+    #craftingEditor .tp-crafting-editor-body {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
       -webkit-overflow-scrolling: touch !important;
-      overscroll-behavior: contain;
-      touch-action: pan-y;
+      overscroll-behavior: contain !important;
+      touch-action: pan-y !important;
+      padding-right: 8px !important;
+      padding-bottom: 18px !important;
     }
 
-    /* Modal cards: never exceed viewport without becoming scrollable */
-    #craftingConfigModal > *,
-    #projectModal > *,
-    #catalogSearchModal > *,
-    .modal-overlay > .modal,
-    .modal-overlay > .modal-content,
-    .tp-modal-overlay > .modal,
-    .tp-modal-overlay > .modal-content {
-      max-height: calc(100dvh - 24px) !important;
+    #craftingEditor #saveCraftingConfig {
+      flex: 0 0 auto !important;
+      width: 100% !important;
+      margin-top: 12px !important;
+    }
+
+    /* PROJETO — mesma proteção */
+    #projectEditor .tp-project-modal {
+      display: flex !important;
+      flex-direction: column !important;
+      width: min(720px, calc(100vw - 40px)) !important;
+      max-height: calc(100dvh - 40px) !important;
+      overflow: hidden !important;
+    }
+
+    #projectEditor .tp-project-form {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
       overflow-y: auto !important;
       overflow-x: hidden !important;
       -webkit-overflow-scrolling: touch !important;
-      overscroll-behavior: contain;
-      touch-action: pan-y;
-      scrollbar-gutter: stable;
+      touch-action: pan-y !important;
+      padding-right: 8px !important;
+      padding-bottom: 18px !important;
     }
 
-    /* Fallback for browsers without dvh */
-    @supports not (height: 100dvh) {
-      #craftingConfigModal > *,
-      #projectModal > *,
-      #catalogSearchModal > *,
-      .modal-overlay > .modal,
-      .modal-overlay > .modal-content,
-      .tp-modal-overlay > .modal,
-      .tp-modal-overlay > .modal-content {
-        max-height: calc(100vh - 24px) !important;
-      }
+    #projectEditor #saveProjectButton {
+      flex: 0 0 auto !important;
+      width: 100% !important;
+      margin-top: 12px !important;
     }
 
-    /* Configuração de fabricação: espaço inferior para o botão final */
-    #craftingConfigModal form,
-    #craftingConfigModal .modal-body,
-    #craftingConfigModal .crafting-config-body {
-      padding-bottom: max(28px, env(safe-area-inset-bottom)) !important;
+    /* CATÁLOGO */
+    #catalogSearchModal .tp-catalog-modal {
+      display: flex !important;
+      flex-direction: column !important;
+      width: min(760px, calc(100vw - 40px)) !important;
+      max-height: calc(100dvh - 40px) !important;
+      overflow: hidden !important;
     }
 
-    /* iPhone/mobile */
+    #catalogSearchModal .tp-catalog-results {
+      flex: 1 1 auto !important;
+      min-height: 120px !important;
+      max-height: none !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      touch-action: pan-y !important;
+    }
+
+    /* Scrollbar visível no notebook */
+    #craftingEditor .tp-crafting-editor-body,
+    #projectEditor .tp-project-form,
+    #catalogSearchModal .tp-catalog-results {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(244,185,66,.55) rgba(255,255,255,.04);
+    }
+
+    #craftingEditor .tp-crafting-editor-body::-webkit-scrollbar,
+    #projectEditor .tp-project-form::-webkit-scrollbar,
+    #catalogSearchModal .tp-catalog-results::-webkit-scrollbar {
+      width: 7px;
+    }
+
+    #craftingEditor .tp-crafting-editor-body::-webkit-scrollbar-thumb,
+    #projectEditor .tp-project-form::-webkit-scrollbar-thumb,
+    #catalogSearchModal .tp-catalog-results::-webkit-scrollbar-thumb {
+      background: rgba(244,185,66,.45);
+      border-radius: 999px;
+    }
+
+    /* Mobile / iPhone */
     @media (max-width: 640px) {
-      #craftingConfigModal,
-      #projectModal,
-      #catalogSearchModal,
-      .modal-overlay,
-      .tp-modal-overlay {
+      #craftingEditor,
+      #projectEditor,
+      #catalogSearchModal {
         align-items: flex-end !important;
         padding: 0 !important;
       }
 
-      #craftingConfigModal > *,
-      #projectModal > *,
-      #catalogSearchModal > *,
-      .modal-overlay > .modal,
-      .modal-overlay > .modal-content,
-      .tp-modal-overlay > .modal,
-      .tp-modal-overlay > .modal-content {
+      #craftingEditor .tp-crafting-modal,
+      #projectEditor .tp-project-modal,
+      #catalogSearchModal .tp-catalog-modal {
         width: 100% !important;
         max-width: 100% !important;
-        max-height: calc(100dvh - env(safe-area-inset-top) - 8px) !important;
-        border-bottom-left-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-        padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+        max-height: calc(100dvh - env(safe-area-inset-top)) !important;
+        border-radius: 22px 22px 0 0 !important;
+      }
+
+      #craftingEditor .tp-crafting-editor-body,
+      #projectEditor .tp-project-form {
+        padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+      }
+    }
+
+    @supports not (height: 100dvh) {
+      #craftingEditor .tp-crafting-modal,
+      #projectEditor .tp-project-modal,
+      #catalogSearchModal .tp-catalog-modal {
+        max-height: calc(100vh - 40px) !important;
+      }
+
+      @media (max-width: 640px) {
+        #craftingEditor .tp-crafting-modal,
+        #projectEditor .tp-project-modal,
+        #catalogSearchModal .tp-catalog-modal {
+          max-height: calc(100vh - env(safe-area-inset-top)) !important;
+        }
       }
     }
   `;
+
   document.head.appendChild(style);
-
-  function enableScrollableModal(modal) {
-    if (!modal) return;
-
-    modal.style.overflowY = "auto";
-    modal.style.overflowX = "hidden";
-    modal.style.webkitOverflowScrolling = "touch";
-    modal.style.touchAction = "pan-y";
-
-    // Find the largest direct child/card and make it the scroll container too.
-    const card = Array.from(modal.children).find(el => {
-      const tag = el.tagName?.toLowerCase();
-      return tag !== "style" && tag !== "script";
-    });
-
-    if (card) {
-      card.style.maxHeight = "calc(100dvh - 24px)";
-      card.style.overflowY = "auto";
-      card.style.overflowX = "hidden";
-      card.style.webkitOverflowScrolling = "touch";
-      card.style.touchAction = "pan-y";
-    }
-  }
-
-  const modalSelectors = [
-    "#craftingConfigModal",
-    "#projectModal",
-    "#catalogSearchModal",
-    ".modal-overlay",
-    ".tp-modal-overlay"
-  ];
-
-  function refreshModalScroll() {
-    document.querySelectorAll(modalSelectors.join(","))
-      .forEach(enableScrollableModal);
-  }
-
-  refreshModalScroll();
-
-  const observer = new MutationObserver(refreshModalScroll);
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["class", "style", "hidden"]
-  });
-
-  window.addEventListener("resize", refreshModalScroll, { passive: true });
-  window.addEventListener("orientationchange", refreshModalScroll, { passive: true });
 })();
