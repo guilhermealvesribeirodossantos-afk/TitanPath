@@ -1693,3 +1693,588 @@ a {
     display: none;
   }
 }
+/* =========================================================
+   FABRICAÇÃO INTELIGENTE v0.3.0
+========================================================= */
+
+.crafting-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.crafting-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -80px -80px auto;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(123,97,255,.14), transparent 70%);
+  pointer-events: none;
+}
+
+.crafting-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
+}
+
+.crafting-secondary-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(255,255,255,.035);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 800;
+  transition: .2s ease;
+}
+
+.crafting-secondary-button:hover {
+  border-color: var(--border-gold);
+  transform: translateY(-1px);
+}
+
+.crafting-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.crafting-summary-card {
+  position: relative;
+  padding: 17px;
+  overflow: hidden;
+}
+
+.crafting-summary-card::after {
+  content: "";
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  right: -42px;
+  top: -42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(42,167,255,.10), transparent 70%);
+}
+
+.crafting-summary-card > span {
+  display: block;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.crafting-summary-card > strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.crafting-summary-card > small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.crafting-advisor-panel {
+  padding: 20px;
+  margin-bottom: 16px;
+  border-color: rgba(123,97,255,.25);
+  background:
+    radial-gradient(circle at top right, rgba(123,97,255,.12), transparent 34%),
+    linear-gradient(135deg, #0e121b, #0a0e14);
+}
+
+.crafting-advisor-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.crafting-advisor-top h3 {
+  margin-top: 4px;
+  font-size: 23px;
+}
+
+.crafting-recommendation {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(244,185,66,.08), rgba(42,167,255,.04)),
+    var(--panel-2);
+  border: 1px solid var(--border-gold);
+}
+
+.crafting-recommendation-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 24px;
+  background: rgba(244,185,66,.10);
+  border: 1px solid var(--border-gold);
+}
+
+.crafting-recommendation span {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.crafting-recommendation h4 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.crafting-recommendation p {
+  margin-top: 6px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.crafting-advisor-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.crafting-advisor-metrics > div {
+  padding: 11px;
+  border-radius: 11px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(255,255,255,.055);
+}
+
+.crafting-advisor-metrics span,
+.crafting-advisor-metrics strong {
+  display: block;
+}
+
+.crafting-advisor-metrics span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.crafting-advisor-metrics strong {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.crafting-controls {
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.crafting-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.crafting-controls label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.crafting-controls select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 38px 0 12px;
+  border-radius: 11px;
+  outline: none;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.02), transparent),
+    var(--panel-2);
+  border: 1px solid var(--border);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.crafting-controls select:focus {
+  border-color: rgba(244,185,66,.5);
+  box-shadow: 0 0 0 3px rgba(244,185,66,.07);
+}
+
+.crafting-controls option {
+  background: #0d131b;
+  color: #f4f7fb;
+}
+
+.crafting-section {
+  margin-bottom: 20px;
+}
+
+.crafting-section-heading {
+  margin-bottom: 12px;
+}
+
+.crafting-section-heading h3 {
+  margin-top: 4px;
+  font-size: 21px;
+}
+
+.crafting-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crafting-slot-card {
+  position: relative;
+  min-height: 130px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.crafting-slot-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -38px -50px auto;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(42,167,255,.08), transparent 70%);
+}
+
+.crafting-slot-card.empty {
+  border-style: dashed;
+  border-color: rgba(94,200,255,.16);
+}
+
+.crafting-slot-number {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.crafting-slot-card strong {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.crafting-slot-card small {
+  margin-top: 5px;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.crafting-blueprints-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.crafting-empty-state {
+  grid-column: 1 / -1;
+  min-height: 210px;
+  padding: 28px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  border-style: dashed;
+}
+
+.crafting-empty-state > span {
+  font-size: 38px;
+}
+
+.crafting-empty-state h4 {
+  margin-top: 9px;
+  font-size: 20px;
+}
+
+.crafting-empty-state p {
+  max-width: 650px;
+  margin-top: 7px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.crafting-blueprint-card {
+  position: relative;
+  min-height: 260px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.crafting-blueprint-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -50px -55px auto;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244,185,66,.08), transparent 70%);
+}
+
+.crafting-blueprint-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.crafting-blueprint-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 23px;
+  background:
+    linear-gradient(135deg, rgba(244,185,66,.10), rgba(42,167,255,.05)),
+    var(--panel-2);
+  border: 1px solid var(--border);
+}
+
+.crafting-blueprint-card h4 {
+  margin-top: 12px;
+  font-size: 17px;
+}
+
+.crafting-blueprint-card .blueprint-subtitle {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.crafting-blueprint-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.crafting-blueprint-stats > div {
+  padding: 8px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(255,255,255,.055);
+}
+
+.crafting-blueprint-stats span,
+.crafting-blueprint-stats strong {
+  display: block;
+}
+
+.crafting-blueprint-stats span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.crafting-blueprint-stats strong {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.crafting-sales-link {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 15px;
+  align-items: start;
+  padding: 20px;
+  margin-top: 4px;
+  border-color: rgba(35,209,139,.18);
+  background:
+    radial-gradient(circle at top right, rgba(35,209,139,.08), transparent 35%),
+    var(--panel);
+}
+
+.crafting-sales-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  font-size: 25px;
+  background: rgba(35,209,139,.08);
+  border: 1px solid rgba(35,209,139,.15);
+}
+
+.crafting-sales-link h3 {
+  margin-top: 4px;
+  font-size: 19px;
+}
+
+.crafting-sales-link p {
+  margin-top: 6px;
+  color: var(--text-soft);
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+/* =========================================================
+   FABRICAÇÃO - TABLET
+========================================================= */
+
+@media (max-width: 1200px) {
+  .crafting-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crafting-advisor-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crafting-slots-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crafting-blueprints-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* =========================================================
+   FABRICAÇÃO - MOBILE
+========================================================= */
+
+@media (max-width: 640px) {
+  .crafting-hero-actions {
+    display: grid;
+    width: 100%;
+  }
+
+  .crafting-secondary-button {
+    width: 100%;
+  }
+
+  .crafting-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .crafting-summary-card {
+    padding: 13px;
+    min-height: 112px;
+  }
+
+  .crafting-summary-card > strong {
+    font-size: 19px;
+    overflow-wrap: anywhere;
+  }
+
+  .crafting-advisor-panel {
+    padding: 16px;
+  }
+
+  .crafting-advisor-top {
+    align-items: center;
+  }
+
+  .crafting-advisor-top h3 {
+    font-size: 20px;
+  }
+
+  .crafting-recommendation {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .crafting-recommendation-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .crafting-advisor-metrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .crafting-controls {
+    padding: 12px;
+  }
+
+  .crafting-controls-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .crafting-controls select {
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  .crafting-section-heading {
+    align-items: flex-end;
+  }
+
+  .crafting-slots-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .crafting-slot-card {
+    min-height: 122px;
+    padding: 13px;
+  }
+
+  .crafting-blueprints-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crafting-empty-state {
+    min-height: 190px;
+    padding: 22px 16px;
+  }
+
+  .crafting-sales-link {
+    grid-template-columns: 1fr;
+    padding: 17px;
+  }
+}
+
+@media (max-width: 390px) {
+  .crafting-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crafting-advisor-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .crafting-slots-grid {
+    grid-template-columns: 1fr;
+  }
+}
