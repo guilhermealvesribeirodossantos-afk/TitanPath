@@ -1108,3 +1108,1106 @@ document.addEventListener("DOMContentLoaded", () => {
 
   updateDashboard();
 });
+/* =========================================================
+   TITANPATH - FABRICAÇÃO INTELIGENTE v0.3.1
+   Projetos + slots + XP/min + ouro/min + Advisor
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const DEFAULT_CRAFTING = {
+    totalSlots: 4,
+    strategy: "fast-growth",
+    sort: "advisor",
+    filter: "all",
+    resources: {
+      wood: 0,
+      iron: 0,
+      leather: 0,
+      herbs: 0
+    },
+    projects: [],
+    queue: [null, null, null, null]
+  };
+
+  let crafting = loadCrafting();
+
+  function cloneCrafting(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  function loadCrafting() {
+    const saved = localStorage.getItem("titanpath_crafting");
+
+    if (!saved) return cloneCrafting(DEFAULT_CRAFTING);
+
+    try {
+      const parsed = JSON.parse(saved);
+
+      const merged = {
+        ...cloneCrafting(DEFAULT_CRAFTING),
+        ...parsed,
+        resources: {
+          ...cloneCrafting(DEFAULT_CRAFTING.resources),
+          ...(parsed.resources || {})
+        }
+      };
+
+      if (!Array.isArray(merged.projects)) merged.projects = [];
+      if (!Array.isArray(merged.queue)) merged.queue = [];
+
+      syncQueueLength(merged);
+
+      return merged;
+    } catch (error) {
+      console.error("Erro ao carregar fabricação:", error);
+      return cloneCrafting(DEFAULT_CRAFTING);
+    }
+  }
+
+  function saveCrafting() {
+    syncQueueLength(crafting);
+    localStorage.setItem("titanpath_crafting", JSON.stringify(crafting));
+  }
+
+  function syncQueueLength(target = crafting) {
+    const total = Math.max(1, Number(target.totalSlots || 4));
+
+    while (target.queue.length < total) target.queue.push(null);
+
+    if (target.queue.length > total) {
+      target.queue = target.queue.slice(0, total);
+    }
+  }
+
+  function fmt(value, decimals = 0) {
+    const n = Number(value || 0);
+
+    return n.toLocaleString("pt-BR", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+  }
+
+  function uidCraft(prefix) {
+    return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  }
+
+  function projectXpPerMin(project) {
+    const time = Math.max(1, Number(project.timeMin || 1));
+    return Number(project.xp || 0) / time;
+  }
+
+  function projectGoldPerMin(project) {
+    const time = Math.max(1, Number(project.timeMin || 1));
+    return Number(project.baseValue || 0) / time;
+  }
+
+  function projectResourcesTotal(project) {
+    const r = project.resources || {};
+    return (
+      Number(r.wood || 0) +
+      Number(r.iron || 0) +
+      Number(r.leather || 0) +
+      Number(r.herbs || 0)
+    );
+  }
+
+  function canCraft(project) {
+    const req = project.resources || {};
+
+    return (
+      Number(crafting.resources.wood || 0) >= Number(req.wood || 0) &&
+      Number(crafting.resources.iron || 0) >= Number(req.iron || 0) &&
+      Number(crafting.resources.leather || 0) >= Number(req.leather || 0) &&
+      Number(crafting.resources.herbs || 0) >= Number(req.herbs || 0)
+    );
+  }
+
+  function normalize(value, min, max) {
+    if (max <= min) return max > 0 ? 1 : 0;
+    return (value - min) / (max - min);
+  }
+
+  function scoreProjects() {
+    const projects = crafting.projects;
+
+    if (!projects.length) return [];
+
+    const xpValues = projects.map(projectXpPerMin);
+    const goldValues = projects.map(projectGoldPerMin);
+
+    const minXp = Math.min(...xpValues);
+    const maxXp = Math.max(...xpValues);
+    const minGold = Math.min(...goldValues);
+    const maxGold = Math.max(...goldValues);
+
+    return projects.map(project => {
+      const xpNorm = normalize(projectXpPerMin(project), minXp, maxXp);
+      const goldNorm = normalize(projectGoldPerMin(project), minGold, maxGold);
+
+      let score = 0;
+
+      switch (crafting.strategy) {
+        case "xp":
+          score = xpNorm;
+          break;
+
+        case "gold":
+          score = goldNorm;
+          break;
+
+        case "balanced":
+          score = (xpNorm * 0.5) + (goldNorm * 0.5);
+          break;
+
+        default:
+          score = (xpNorm * 0.6) + (goldNorm * 0.4);
+      }
+
+      if (!canCraft(project)) score *= 0.35;
+
+      const stock = Number(project.stock || 0);
+
+      if (stock <= 1) score += 0.08;
+      if (stock >= 10) score -= 0.08;
+
+      return {
+        ...project,
+        xpPerMin: projectXpPerMin(project),
+        goldPerMin: projectGoldPerMin(project),
+        score: Math.max(0, score),
+        craftable: canCraft(project)
+      };
+    });
+  }
+
+  function getRankedProjects() {
+    const scored = scoreProjects();
+
+    return [...scored].sort((a, b) => b.score - a.score);
+  }
+
+  function strategyLabel() {
+    const labels = {
+      "fast-growth": "Crescimento Rápido",
+      xp: "Priorizar XP",
+      gold: "Priorizar Ouro",
+      balanced: "Equilibrado"
+    };
+
+    return labels[crafting.strategy] || "Crescimento Rápido";
+  }
+
+  function setCraftText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function freeCraftingSlots() {
+    return crafting.queue.filter(item => !item).length;
+  }
+
+  function busyCraftingSlots() {
+    return crafting.queue.filter(Boolean).length;
+  }
+
+  function totalStock() {
+    return crafting.projects.reduce(
+      (sum, p) => sum + Number(p.stock || 0),
+      0
+    );
+  }
+
+  function projectById(id) {
+    return crafting.projects.find(p => p.id === id) || null;
+  }
+
+  function updateCraftingUI() {
+    syncQueueLength();
+
+    setCraftText("craftingBusySlots", busyCraftingSlots());
+    setCraftText("craftingTotalSlots", crafting.totalSlots);
+    setCraftText(
+      "craftingSlotStatus",
+      `${freeCraftingSlots()} ${freeCraftingSlots() === 1 ? "disponível" : "disponíveis"}`
+    );
+    setCraftText("craftingBlueprintCount", crafting.projects.length);
+    setCraftText("craftingStockCount", totalStock());
+    setCraftText("craftingModeLabel", strategyLabel());
+
+    const strategySelect = document.getElementById("craftingStrategySelect");
+    const sortSelect = document.getElementById("craftingSortSelect");
+    const filterSelect = document.getElementById("craftingFilterSelect");
+
+    if (strategySelect) strategySelect.value = crafting.strategy;
+    if (sortSelect) sortSelect.value = crafting.sort;
+    if (filterSelect) filterSelect.value = crafting.filter;
+
+    renderCraftingSlots();
+    renderBlueprints();
+    renderCraftingAdvisor();
+  }
+
+  function renderCraftingSlots() {
+    const grid = document.getElementById("craftingSlotsGrid");
+    if (!grid) return;
+
+    grid.innerHTML = crafting.queue.map((projectId, index) => {
+      const project = projectId ? projectById(projectId) : null;
+
+      if (!project) {
+        return `
+          <article class="panel crafting-slot-card empty">
+            <span class="crafting-slot-number">SLOT ${index + 1}</span>
+            <strong>Livre</strong>
+            <small>O Advisor indicará o próximo item.</small>
+            <button class="tp-slot-recommend" data-fill-slot="${index}">
+              Usar recomendação
+            </button>
+          </article>
+        `;
+      }
+
+      return `
+        <article class="panel crafting-slot-card active">
+          <span class="crafting-slot-number">SLOT ${index + 1}</span>
+          <strong>${escapeHtml(project.name)}</strong>
+          <small>Tier ${project.tier} • ${fmt(project.timeMin)} min • ${fmt(project.xp)} XP</small>
+
+          <div class="tp-slot-actions">
+            <button class="tp-slot-complete" data-complete-slot="${index}">
+              ✓ Concluir
+            </button>
+
+            <button class="tp-slot-cancel" data-cancel-slot="${index}">
+              Liberar
+            </button>
+          </div>
+        </article>
+      `;
+    }).join("");
+
+    grid.querySelectorAll("[data-fill-slot]").forEach(button => {
+      button.addEventListener("click", () => {
+        const ranked = getRankedProjects().filter(p => p.craftable);
+
+        if (!ranked.length) {
+          alert("Cadastre um projeto fabricável ou atualize seus recursos.");
+          return;
+        }
+
+        crafting.queue[Number(button.dataset.fillSlot)] = ranked[0].id;
+        saveCrafting();
+        updateCraftingUI();
+      });
+    });
+
+    grid.querySelectorAll("[data-cancel-slot]").forEach(button => {
+      button.addEventListener("click", () => {
+        crafting.queue[Number(button.dataset.cancelSlot)] = null;
+        saveCrafting();
+        updateCraftingUI();
+      });
+    });
+
+    grid.querySelectorAll("[data-complete-slot]").forEach(button => {
+      button.addEventListener("click", () => {
+        const index = Number(button.dataset.completeSlot);
+        const project = projectById(crafting.queue[index]);
+
+        if (project) {
+          project.stock = Number(project.stock || 0) + 1;
+          consumeResources(project);
+        }
+
+        crafting.queue[index] = null;
+
+        saveCrafting();
+        updateCraftingUI();
+      });
+    });
+  }
+
+  function consumeResources(project) {
+    const req = project.resources || {};
+
+    Object.keys(crafting.resources).forEach(key => {
+      crafting.resources[key] = Math.max(
+        0,
+        Number(crafting.resources[key] || 0) - Number(req[key] || 0)
+      );
+    });
+  }
+
+  function renderBlueprints() {
+    const grid = document.getElementById("craftingBlueprintsGrid");
+    if (!grid) return;
+
+    if (!crafting.projects.length) {
+      grid.innerHTML = `
+        <article class="panel crafting-empty-state">
+          <span>📘</span>
+          <h4>Nenhum projeto cadastrado ainda</h4>
+          <p>Use “Adicionar Projeto” para informar os itens que você já consegue fabricar. Depois disso, o TitanPath fará os cálculos automaticamente.</p>
+        </article>
+      `;
+      return;
+    }
+
+    let list = scoreProjects();
+
+    if (crafting.filter === "recommended") {
+      const rankedIds = getRankedProjects()
+        .slice(0, Math.max(1, Math.ceil(crafting.projects.length / 2)))
+        .map(p => p.id);
+
+      list = list.filter(p => rankedIds.includes(p.id));
+    }
+
+    if (crafting.filter === "avoid") {
+      const ranked = getRankedProjects();
+      const avoidIds = ranked
+        .slice(Math.max(1, Math.floor(ranked.length * 0.7)))
+        .map(p => p.id);
+
+      list = list.filter(p => avoidIds.includes(p.id));
+    }
+
+    if (crafting.filter === "stock-low") {
+      list = list.filter(p => Number(p.stock || 0) <= 2);
+    }
+
+    switch (crafting.sort) {
+      case "xpPerMin":
+        list.sort((a, b) => b.xpPerMin - a.xpPerMin);
+        break;
+
+      case "goldPerMin":
+        list.sort((a, b) => b.goldPerMin - a.goldPerMin);
+        break;
+
+      case "tier":
+        list.sort((a, b) => Number(b.tier) - Number(a.tier));
+        break;
+
+      case "time":
+        list.sort((a, b) => Number(a.timeMin) - Number(b.timeMin));
+        break;
+
+      default:
+        list.sort((a, b) => b.score - a.score);
+    }
+
+    const rankedIds = getRankedProjects().map(p => p.id);
+
+    grid.innerHTML = list.map(project => {
+      const rank = rankedIds.indexOf(project.id) + 1;
+      const badge =
+        rank === 1 ? "MELHOR AGORA" :
+        project.craftable ? "DISPONÍVEL" : "SEM RECURSO";
+
+      const badgeClass =
+        rank === 1 ? "high" :
+        project.craftable ? "medium" : "low";
+
+      return `
+        <article class="panel crafting-blueprint-card">
+          <div class="crafting-blueprint-top">
+            <div class="crafting-blueprint-icon">${project.icon || "⚒️"}</div>
+            <span class="priority-badge ${badgeClass}">${badge}</span>
+          </div>
+
+          <h4>${escapeHtml(project.name)}</h4>
+          <span class="blueprint-subtitle">
+            Tier ${project.tier} • ${escapeHtml(project.category || "Item")}
+          </span>
+
+          <div class="crafting-blueprint-stats">
+            <div>
+              <span>Tempo</span>
+              <strong>${fmt(project.timeMin)} min</strong>
+            </div>
+
+            <div>
+              <span>Valor base</span>
+              <strong>${fmt(project.baseValue)} 🪙</strong>
+            </div>
+
+            <div>
+              <span>XP</span>
+              <strong>${fmt(project.xp)}</strong>
+            </div>
+
+            <div>
+              <span>Estoque</span>
+              <strong>${fmt(project.stock)}</strong>
+            </div>
+
+            <div>
+              <span>XP/min</span>
+              <strong>${fmt(project.xpPerMin, 1)}</strong>
+            </div>
+
+            <div>
+              <span>Ouro/min</span>
+              <strong>${fmt(project.goldPerMin, 1)}</strong>
+            </div>
+          </div>
+
+          <div class="tp-project-resource-line">
+            ${resourceText(project)}
+          </div>
+
+          <div class="tp-project-actions">
+            <button class="tp-project-craft" data-craft-project="${project.id}">
+              🔨 Fabricar
+            </button>
+
+            <button class="tp-project-edit" data-edit-project="${project.id}">
+              ✏️ Editar
+            </button>
+
+            <button class="tp-project-delete" data-delete-project="${project.id}">
+              Excluir
+            </button>
+          </div>
+        </article>
+      `;
+    }).join("");
+
+    grid.querySelectorAll("[data-craft-project]").forEach(button => {
+      button.addEventListener("click", () => {
+        const project = projectById(button.dataset.craftProject);
+
+        if (!project) return;
+
+        if (!canCraft(project)) {
+          alert("Você não registrou recursos suficientes para fabricar este item.");
+          return;
+        }
+
+        const freeIndex = crafting.queue.findIndex(x => !x);
+
+        if (freeIndex < 0) {
+          alert("Todos os slots estão ocupados.");
+          return;
+        }
+
+        crafting.queue[freeIndex] = project.id;
+        saveCrafting();
+        updateCraftingUI();
+      });
+    });
+
+    grid.querySelectorAll("[data-edit-project]").forEach(button => {
+      button.addEventListener("click", () => {
+        openProjectEditor(button.dataset.editProject);
+      });
+    });
+
+    grid.querySelectorAll("[data-delete-project]").forEach(button => {
+      button.addEventListener("click", () => {
+        const id = button.dataset.deleteProject;
+        const project = projectById(id);
+
+        if (!project) return;
+
+        if (!confirm(`Excluir o projeto "${project.name}" do TitanPath?`)) return;
+
+        crafting.projects = crafting.projects.filter(p => p.id !== id);
+        crafting.queue = crafting.queue.map(q => q === id ? null : q);
+
+        saveCrafting();
+        updateCraftingUI();
+      });
+    });
+  }
+
+  function resourceText(project) {
+    const labels = {
+      wood: "Madeira",
+      iron: "Ferro",
+      leather: "Couro",
+      herbs: "Ervas"
+    };
+
+    const entries = Object.entries(project.resources || {})
+      .filter(([, amount]) => Number(amount) > 0);
+
+    if (!entries.length) return "Recursos básicos não informados";
+
+    return entries
+      .map(([key, amount]) => `${labels[key] || key}: ${fmt(amount)}`)
+      .join(" • ");
+  }
+
+  function renderCraftingAdvisor() {
+    const ranked = getRankedProjects();
+
+    const priority = document.getElementById("craftingAdvisorPriority");
+    const recommendation = document.getElementById("craftingRecommendation");
+
+    if (!ranked.length) {
+      if (priority) priority.textContent = "AGUARDANDO";
+
+      if (recommendation) {
+        recommendation.innerHTML = `
+          <div class="crafting-recommendation-icon">⚙️</div>
+          <div>
+            <span>PRÓXIMA AÇÃO</span>
+            <h4>Cadastre seus projetos desbloqueados</h4>
+            <p>Depois disso, o TitanPath poderá comparar automaticamente XP/min, ouro/min, recursos disponíveis e estoque.</p>
+          </div>
+        `;
+      }
+
+      setCraftText("bestXpPerMin", "—");
+      setCraftText("bestGoldPerMin", "—");
+      setCraftText("bestBalancedItem", "—");
+      setCraftText("worstCraftItem", "—");
+      return;
+    }
+
+    const best = ranked[0];
+
+    if (priority) priority.textContent = best.craftable ? "FABRIQUE AGORA" : "FALTA RECURSO";
+
+    if (recommendation) {
+      recommendation.innerHTML = `
+        <div class="crafting-recommendation-icon">${best.icon || "⚒️"}</div>
+        <div>
+          <span>PRÓXIMA AÇÃO</span>
+          <h4>${best.craftable ? `Fabrique ${escapeHtml(best.name)}` : `Prepare recursos para ${escapeHtml(best.name)}`}</h4>
+          <p>
+            ${advisorReason(best)}
+          </p>
+        </div>
+      `;
+    }
+
+    const bestXp = [...ranked].sort((a, b) => b.xpPerMin - a.xpPerMin)[0];
+    const bestGold = [...ranked].sort((a, b) => b.goldPerMin - a.goldPerMin)[0];
+    const worst = ranked[ranked.length - 1];
+
+    setCraftText("bestXpPerMin", `${bestXp.name} • ${fmt(bestXp.xpPerMin, 1)}`);
+    setCraftText("bestGoldPerMin", `${bestGold.name} • ${fmt(bestGold.goldPerMin, 1)}`);
+    setCraftText("bestBalancedItem", best.name);
+    setCraftText("worstCraftItem", worst.name);
+  }
+
+  function advisorReason(project) {
+    const parts = [
+      `${fmt(project.xpPerMin, 1)} XP/min`,
+      `${fmt(project.goldPerMin, 1)} ouro/min`,
+      `estoque ${fmt(project.stock)}`
+    ];
+
+    if (!project.craftable) {
+      parts.push("recursos insuficientes");
+    } else {
+      parts.push("recursos disponíveis");
+    }
+
+    if (crafting.strategy === "xp") {
+      return `No modo XP, este projeto se destaca por ${parts.join(", ")}.`;
+    }
+
+    if (crafting.strategy === "gold") {
+      return `No modo Ouro, este projeto se destaca por ${parts.join(", ")}.`;
+    }
+
+    if (crafting.strategy === "balanced") {
+      return `No modo Equilibrado, este projeto apresenta a melhor combinação atual: ${parts.join(", ")}.`;
+    }
+
+    return `Para crescimento rápido, o TitanPath ponderou XP e ouro com maior peso em XP. Resultado atual: ${parts.join(", ")}.`;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  /* =======================================================
+     EDITOR DE FABRICAÇÃO
+  ======================================================= */
+
+  const craftingModal = document.createElement("div");
+  craftingModal.id = "craftingEditor";
+
+  craftingModal.innerHTML = `
+    <div class="tp-modal-overlay"></div>
+
+    <div class="tp-modal tp-crafting-modal">
+      <div class="tp-modal-header">
+        <div>
+          <span>FABRICAÇÃO</span>
+          <h2>Configurar fabricação</h2>
+        </div>
+
+        <button id="closeCraftingEditor">✕</button>
+      </div>
+
+      <div class="tp-crafting-editor-body">
+        <section class="tp-editor-section">
+          <h3>🔨 Slots</h3>
+
+          <label class="tp-full-field">
+            Slots de fabricação
+            <input type="number" id="editCraftingSlots" min="1" max="20">
+          </label>
+        </section>
+
+        <section class="tp-editor-section">
+          <h3>📦 Recursos disponíveis agora</h3>
+          <p class="tp-editor-help">
+            Informe apenas o que você tem disponível no momento. O TitanPath usa isso para saber o que é fabricável.
+          </p>
+
+          <div class="tp-resource-edit-grid">
+            <label>Madeira
+              <input type="number" id="editResourceWood" min="0">
+            </label>
+
+            <label>Ferro
+              <input type="number" id="editResourceIron" min="0">
+            </label>
+
+            <label>Couro
+              <input type="number" id="editResourceLeather" min="0">
+            </label>
+
+            <label>Ervas
+              <input type="number" id="editResourceHerbs" min="0">
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <button id="saveCraftingConfig" class="tp-save-button">
+        SALVAR CONFIGURAÇÃO
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(craftingModal);
+
+  function openCraftingEditor() {
+    document.getElementById("editCraftingSlots").value = crafting.totalSlots;
+    document.getElementById("editResourceWood").value = crafting.resources.wood;
+    document.getElementById("editResourceIron").value = crafting.resources.iron;
+    document.getElementById("editResourceLeather").value = crafting.resources.leather;
+    document.getElementById("editResourceHerbs").value = crafting.resources.herbs;
+
+    craftingModal.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeCraftingEditor() {
+    craftingModal.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  document.getElementById("editCraftingButton")
+    ?.addEventListener("click", openCraftingEditor);
+
+  document.getElementById("closeCraftingEditor")
+    .addEventListener("click", closeCraftingEditor);
+
+  craftingModal.querySelector(".tp-modal-overlay")
+    .addEventListener("click", closeCraftingEditor);
+
+  document.getElementById("saveCraftingConfig")
+    .addEventListener("click", () => {
+      crafting.totalSlots = Math.max(
+        1,
+        Number(document.getElementById("editCraftingSlots").value || 4)
+      );
+
+      crafting.resources.wood = Math.max(
+        0,
+        Number(document.getElementById("editResourceWood").value || 0)
+      );
+
+      crafting.resources.iron = Math.max(
+        0,
+        Number(document.getElementById("editResourceIron").value || 0)
+      );
+
+      crafting.resources.leather = Math.max(
+        0,
+        Number(document.getElementById("editResourceLeather").value || 0)
+      );
+
+      crafting.resources.herbs = Math.max(
+        0,
+        Number(document.getElementById("editResourceHerbs").value || 0)
+      );
+
+      syncQueueLength();
+      saveCrafting();
+      updateCraftingUI();
+      closeCraftingEditor();
+    });
+
+  /* =======================================================
+     EDITOR DE PROJETO
+  ======================================================= */
+
+  const projectModal = document.createElement("div");
+  projectModal.id = "projectEditor";
+
+  projectModal.innerHTML = `
+    <div class="tp-modal-overlay"></div>
+
+    <div class="tp-modal tp-project-modal">
+      <div class="tp-modal-header">
+        <div>
+          <span>PROJETO</span>
+          <h2 id="projectEditorTitle">Adicionar projeto</h2>
+        </div>
+
+        <button id="closeProjectEditor">✕</button>
+      </div>
+
+      <div class="tp-project-form">
+        <input type="hidden" id="projectId">
+
+        <label>Nome do item
+          <input type="text" id="projectName" placeholder="Ex.: Espada de Ferro">
+        </label>
+
+        <div class="tp-project-form-grid">
+          <label>Tier
+            <input type="number" id="projectTier" min="1" max="20" value="1">
+          </label>
+
+          <label>Categoria
+            <input type="text" id="projectCategory" placeholder="Espada, Armadura...">
+          </label>
+
+          <label>Tempo (min)
+            <input type="number" id="projectTime" min="1" value="1">
+          </label>
+
+          <label>Valor base
+            <input type="number" id="projectValue" min="0" value="0">
+          </label>
+
+          <label>XP do Mercador
+            <input type="number" id="projectXp" min="0" value="0">
+          </label>
+
+          <label>Estoque atual
+            <input type="number" id="projectStock" min="0" value="0">
+          </label>
+        </div>
+
+        <h3 class="tp-project-resource-title">Recursos necessários</h3>
+
+        <div class="tp-project-form-grid">
+          <label>Madeira
+            <input type="number" id="projectWood" min="0" value="0">
+          </label>
+
+          <label>Ferro
+            <input type="number" id="projectIron" min="0" value="0">
+          </label>
+
+          <label>Couro
+            <input type="number" id="projectLeather" min="0" value="0">
+          </label>
+
+          <label>Ervas
+            <input type="number" id="projectHerbs" min="0" value="0">
+          </label>
+        </div>
+      </div>
+
+      <button id="saveProjectButton" class="tp-save-button">
+        SALVAR PROJETO
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(projectModal);
+
+  function openProjectEditor(id = null) {
+    const project = id ? projectById(id) : null;
+
+    setProjectValue("projectId", project?.id || "");
+    setProjectValue("projectName", project?.name || "");
+    setProjectValue("projectTier", project?.tier || 1);
+    setProjectValue("projectCategory", project?.category || "");
+    setProjectValue("projectTime", project?.timeMin || 1);
+    setProjectValue("projectValue", project?.baseValue || 0);
+    setProjectValue("projectXp", project?.xp || 0);
+    setProjectValue("projectStock", project?.stock || 0);
+    setProjectValue("projectWood", project?.resources?.wood || 0);
+    setProjectValue("projectIron", project?.resources?.iron || 0);
+    setProjectValue("projectLeather", project?.resources?.leather || 0);
+    setProjectValue("projectHerbs", project?.resources?.herbs || 0);
+
+    setCraftText(
+      "projectEditorTitle",
+      project ? "Editar projeto" : "Adicionar projeto"
+    );
+
+    projectModal.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function setProjectValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  function closeProjectEditor() {
+    projectModal.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  document.getElementById("addBlueprintButton")
+    ?.addEventListener("click", () => openProjectEditor());
+
+  document.getElementById("closeProjectEditor")
+    .addEventListener("click", closeProjectEditor);
+
+  projectModal.querySelector(".tp-modal-overlay")
+    .addEventListener("click", closeProjectEditor);
+
+  document.getElementById("saveProjectButton")
+    .addEventListener("click", () => {
+      const id = document.getElementById("projectId").value.trim();
+      const name = document.getElementById("projectName").value.trim();
+
+      if (!name) {
+        alert("Informe o nome do projeto.");
+        return;
+      }
+
+      const data = {
+        id: id || uidCraft("project"),
+        name,
+        icon: "⚒️",
+        tier: Math.max(1, Number(document.getElementById("projectTier").value || 1)),
+        category: document.getElementById("projectCategory").value.trim() || "Item",
+        timeMin: Math.max(1, Number(document.getElementById("projectTime").value || 1)),
+        baseValue: Math.max(0, Number(document.getElementById("projectValue").value || 0)),
+        xp: Math.max(0, Number(document.getElementById("projectXp").value || 0)),
+        stock: Math.max(0, Number(document.getElementById("projectStock").value || 0)),
+        resources: {
+          wood: Math.max(0, Number(document.getElementById("projectWood").value || 0)),
+          iron: Math.max(0, Number(document.getElementById("projectIron").value || 0)),
+          leather: Math.max(0, Number(document.getElementById("projectLeather").value || 0)),
+          herbs: Math.max(0, Number(document.getElementById("projectHerbs").value || 0))
+        }
+      };
+
+      const existingIndex = crafting.projects.findIndex(p => p.id === data.id);
+
+      if (existingIndex >= 0) {
+        crafting.projects[existingIndex] = data;
+      } else {
+        crafting.projects.push(data);
+      }
+
+      saveCrafting();
+      updateCraftingUI();
+      closeProjectEditor();
+    });
+
+  /* =======================================================
+     FILTROS E ESTRATÉGIA
+  ======================================================= */
+
+  document.getElementById("craftingStrategySelect")
+    ?.addEventListener("change", event => {
+      crafting.strategy = event.target.value;
+      saveCrafting();
+      updateCraftingUI();
+    });
+
+  document.getElementById("craftingSortSelect")
+    ?.addEventListener("change", event => {
+      crafting.sort = event.target.value;
+      saveCrafting();
+      renderBlueprints();
+    });
+
+  document.getElementById("craftingFilterSelect")
+    ?.addEventListener("change", event => {
+      crafting.filter = event.target.value;
+      saveCrafting();
+      renderBlueprints();
+    });
+
+  /* =======================================================
+     ESTILOS DINÂMICOS DA FABRICAÇÃO
+  ======================================================= */
+
+  const craftingStyle = document.createElement("style");
+
+  craftingStyle.textContent = `
+    #craftingEditor,#projectEditor{
+      position:fixed;inset:0;z-index:10010;display:none;
+      align-items:center;justify-content:center;padding:20px
+    }
+
+    #craftingEditor.open,#projectEditor.open{display:flex}
+
+    .tp-crafting-modal,.tp-project-modal{
+      width:min(720px,100%)
+    }
+
+    .tp-crafting-editor-body{
+      overflow-y:auto;
+      padding-right:4px;
+    }
+
+    .tp-full-field,
+    .tp-resource-edit-grid label,
+    .tp-project-form label{
+      display:grid;
+      gap:7px;
+      color:#a7b0bf;
+      font-size:11px;
+      font-weight:700;
+    }
+
+    .tp-full-field input,
+    .tp-resource-edit-grid input,
+    .tp-project-form input{
+      width:100%;
+      min-height:44px;
+      padding:0 12px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);
+      outline:none;
+      background:#080c12;
+      color:#fff;
+      font-size:14px;
+    }
+
+    .tp-resource-edit-grid,
+    .tp-project-form-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+
+    .tp-project-form{
+      display:grid;
+      gap:14px;
+      overflow-y:auto;
+      max-height:68vh;
+      padding-right:4px;
+    }
+
+    .tp-project-resource-title{
+      margin-top:4px;
+      font-size:14px;
+    }
+
+    .tp-project-actions,
+    .tp-slot-actions{
+      display:flex;
+      gap:7px;
+      flex-wrap:wrap;
+      margin-top:12px;
+      position:relative;
+      z-index:2;
+    }
+
+    .tp-project-actions button,
+    .tp-slot-actions button,
+    .tp-slot-recommend{
+      min-height:38px;
+      padding:0 10px;
+      border-radius:9px;
+      cursor:pointer;
+      font-size:11px;
+      font-weight:800;
+    }
+
+    .tp-project-craft,
+    .tp-slot-recommend,
+    .tp-slot-complete{
+      background:rgba(244,185,66,.10);
+      border:1px solid rgba(244,185,66,.25);
+      color:#ffd36a;
+    }
+
+    .tp-project-edit,
+    .tp-slot-cancel{
+      background:rgba(42,167,255,.08);
+      border:1px solid rgba(42,167,255,.18);
+      color:#aaddff;
+    }
+
+    .tp-project-delete{
+      background:rgba(255,95,102,.07);
+      border:1px solid rgba(255,95,102,.16);
+      color:#ff9297;
+    }
+
+    .tp-project-resource-line{
+      margin-top:10px;
+      padding:8px 9px;
+      border-radius:9px;
+      background:rgba(255,255,255,.025);
+      color:#a7b0bf;
+      font-size:10px;
+      line-height:1.45;
+    }
+
+    .crafting-slot-card.active{
+      border-color:rgba(244,185,66,.22);
+    }
+
+    @media(max-width:640px){
+      #craftingEditor,#projectEditor{
+        align-items:flex-end;
+        padding:0;
+      }
+
+      .tp-crafting-modal,.tp-project-modal{
+        width:100%;
+        max-height:94vh;
+        border-radius:22px 22px 0 0;
+      }
+
+      .tp-resource-edit-grid,
+      .tp-project-form-grid{
+        grid-template-columns:1fr 1fr;
+      }
+
+      .tp-project-actions button{
+        flex:1 1 auto;
+      }
+    }
+
+    @media(max-width:390px){
+      .tp-resource-edit-grid,
+      .tp-project-form-grid{
+        grid-template-columns:1fr;
+      }
+    }
+  `;
+
+  document.head.appendChild(craftingStyle);
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      closeCraftingEditor();
+      closeProjectEditor();
+    }
+  });
+
+  updateCraftingUI();
+});
