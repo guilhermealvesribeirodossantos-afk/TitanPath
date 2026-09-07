@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.5.0
+   TITANPATH - APP.JS v0.5.1
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -3256,3 +3256,140 @@ document.addEventListener("DOMContentLoaded", () => {
     updateCraftingUI();
   });
 });
+
+/* =========================================================
+   TITANPATH v0.5.1 — FIX GLOBAL DE SCROLL DOS MODAIS
+   Mantém o conteúdo interno rolável em desktop/iPhone.
+========================================================= */
+(() => {
+  const style = document.createElement("style");
+  style.id = "titanpath-modal-scroll-fix-v051";
+  style.textContent = `
+    /* Overlays/modal roots */
+    #craftingConfigModal,
+    #projectModal,
+    #catalogSearchModal,
+    .modal-overlay,
+    .tp-modal-overlay {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+
+    /* Modal cards: never exceed viewport without becoming scrollable */
+    #craftingConfigModal > *,
+    #projectModal > *,
+    #catalogSearchModal > *,
+    .modal-overlay > .modal,
+    .modal-overlay > .modal-content,
+    .tp-modal-overlay > .modal,
+    .tp-modal-overlay > .modal-content {
+      max-height: calc(100dvh - 24px) !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+      scrollbar-gutter: stable;
+    }
+
+    /* Fallback for browsers without dvh */
+    @supports not (height: 100dvh) {
+      #craftingConfigModal > *,
+      #projectModal > *,
+      #catalogSearchModal > *,
+      .modal-overlay > .modal,
+      .modal-overlay > .modal-content,
+      .tp-modal-overlay > .modal,
+      .tp-modal-overlay > .modal-content {
+        max-height: calc(100vh - 24px) !important;
+      }
+    }
+
+    /* Configuração de fabricação: espaço inferior para o botão final */
+    #craftingConfigModal form,
+    #craftingConfigModal .modal-body,
+    #craftingConfigModal .crafting-config-body {
+      padding-bottom: max(28px, env(safe-area-inset-bottom)) !important;
+    }
+
+    /* iPhone/mobile */
+    @media (max-width: 640px) {
+      #craftingConfigModal,
+      #projectModal,
+      #catalogSearchModal,
+      .modal-overlay,
+      .tp-modal-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+      }
+
+      #craftingConfigModal > *,
+      #projectModal > *,
+      #catalogSearchModal > *,
+      .modal-overlay > .modal,
+      .modal-overlay > .modal-content,
+      .tp-modal-overlay > .modal,
+      .tp-modal-overlay > .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: calc(100dvh - env(safe-area-inset-top) - 8px) !important;
+        border-bottom-left-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  function enableScrollableModal(modal) {
+    if (!modal) return;
+
+    modal.style.overflowY = "auto";
+    modal.style.overflowX = "hidden";
+    modal.style.webkitOverflowScrolling = "touch";
+    modal.style.touchAction = "pan-y";
+
+    // Find the largest direct child/card and make it the scroll container too.
+    const card = Array.from(modal.children).find(el => {
+      const tag = el.tagName?.toLowerCase();
+      return tag !== "style" && tag !== "script";
+    });
+
+    if (card) {
+      card.style.maxHeight = "calc(100dvh - 24px)";
+      card.style.overflowY = "auto";
+      card.style.overflowX = "hidden";
+      card.style.webkitOverflowScrolling = "touch";
+      card.style.touchAction = "pan-y";
+    }
+  }
+
+  const modalSelectors = [
+    "#craftingConfigModal",
+    "#projectModal",
+    "#catalogSearchModal",
+    ".modal-overlay",
+    ".tp-modal-overlay"
+  ];
+
+  function refreshModalScroll() {
+    document.querySelectorAll(modalSelectors.join(","))
+      .forEach(enableScrollableModal);
+  }
+
+  refreshModalScroll();
+
+  const observer = new MutationObserver(refreshModalScroll);
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["class", "style", "hidden"]
+  });
+
+  window.addEventListener("resize", refreshModalScroll, { passive: true });
+  window.addEventListener("orientationchange", refreshModalScroll, { passive: true });
+})();
