@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.5.2
+   TITANPATH - APP.JS v0.6.0
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     bins: {
       wood: {
         name: "Madeira",
+        resource: "Madeira",
         icon: "🪵",
         items: [
           { id: "wood-1", level: 3 },
@@ -76,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       iron: {
         name: "Ferro",
+        resource: "Ferro",
         icon: "⛓️",
         items: [
           { id: "iron-1", level: 3 },
@@ -84,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       leather: {
         name: "Couro",
+        resource: "Couro",
         icon: "🟫",
         items: [
           { id: "leather-1", level: 3 },
@@ -92,11 +95,66 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       herbs: {
         name: "Ervas",
+        resource: "Ervas",
         icon: "🌿",
         items: [
           { id: "herbs-1", level: 3 },
           { id: "herbs-2", level: 3 }
         ]
+      },
+      steel: {
+        name: "Aço",
+        resource: "Aço",
+        icon: "🔩",
+        items: []
+      },
+      ironwood: {
+        name: "Madeira de Ferro",
+        resource: "Madeira de Ferro",
+        icon: "🌲",
+        items: []
+      },
+      fabric: {
+        name: "Tecido",
+        resource: "Tecido",
+        icon: "🧵",
+        items: []
+      },
+      oil: {
+        name: "Óleo",
+        resource: "Óleo",
+        icon: "🛢️",
+        items: []
+      },
+      jewel: {
+        name: "Joias",
+        resource: "Joias",
+        icon: "💎",
+        items: []
+      },
+      ether: {
+        name: "Éter",
+        resource: "Éter",
+        icon: "🔮",
+        items: []
+      },
+      essence: {
+        name: "Essência",
+        resource: "Essência",
+        icon: "✨",
+        items: []
+      },
+      stardust: {
+        name: "Poeira Estelar",
+        resource: "Poeira Estelar",
+        icon: "🌟",
+        items: []
+      },
+      dragonHoard: {
+        name: "Tesouro do Dragão",
+        resource: null,
+        icon: "🐉",
+        items: []
       }
     },
     chests: [
@@ -108,10 +166,115 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   let account = loadAccount();
-  let shop = migrateShop(loadRaw("titanpath_shop"));
+  let shop = normalizeShopV060(migrateShop(loadRaw("titanpath_shop")));
+
+  let resourceBinCatalog = [];
+  window.TitanPathResourceBins = {
+    loaded: false,
+    bins: []
+  };
 
   function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
+  }
+
+  function normalizeShopV060(savedShop) {
+    const next = savedShop ? clone(savedShop) : clone(defaultShop);
+
+    next.racks = next.racks || {};
+    next.bins = next.bins || {};
+    next.chests = Array.isArray(next.chests) ? next.chests : [];
+    next.counter = next.counter || clone(defaultShop.counter);
+
+    Object.entries(defaultShop.racks).forEach(([key, defaults]) => {
+      if (!next.racks[key]) next.racks[key] = clone(defaults);
+      if (!Array.isArray(next.racks[key].items)) next.racks[key].items = [];
+    });
+
+    Object.entries(defaultShop.bins).forEach(([key, defaults]) => {
+      if (!next.bins[key]) {
+        next.bins[key] = clone(defaults);
+      } else {
+        next.bins[key] = {
+          ...clone(defaults),
+          ...next.bins[key],
+          items: Array.isArray(next.bins[key].items)
+            ? next.bins[key].items
+            : []
+        };
+      }
+    });
+
+    localStorage.setItem("titanpath_shop", JSON.stringify(next));
+    return next;
+  }
+
+  async function loadResourceBinCatalog() {
+    try {
+      const response = await fetch("data/resource-bins.json", { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      resourceBinCatalog = Array.isArray(data.bins) ? data.bins : [];
+
+      window.TitanPathResourceBins = {
+        loaded: true,
+        bins: resourceBinCatalog,
+        source: data.source || null
+      };
+
+      document.dispatchEvent(new CustomEvent("titanpath:resourcebinsloaded"));
+    } catch (error) {
+      console.error("TitanPath: não foi possível carregar Resource Bins:", error);
+
+      window.TitanPathResourceBins = {
+        loaded: false,
+        bins: []
+      };
+    }
+  }
+
+  function resourceBinDefinition(key) {
+    return resourceBinCatalog.find(bin => bin.key === key) || null;
+  }
+
+  function resourceBinLevelData(key, level) {
+    const definition = resourceBinDefinition(key);
+    if (definition) {
+      return definition.levels?.find(item => Number(item.level) === Number(level)) || null;
+    }
+
+    // Fallback somente para os cestos básicos caso o JSON ainda não tenha carregado.
+    if (["wood", "iron", "leather", "herbs"].includes(key)) {
+      const cap = TIER1_BIN_CAPACITY[Number(level)];
+      return cap ? { level: Number(level), storageCap: cap } : null;
+    }
+
+    return null;
+  }
+
+  function displayBinCapacity(value) {
+    if (value === null || value === undefined || value === "") return "—";
+    return typeof value === "number" ? formatNumber(value) : String(value);
+  }
+
+  function numericBinTotal(key, items) {
+    let total = 0;
+    let numeric = true;
+
+    items.forEach(item => {
+      const value = resourceBinLevelData(key, item.level)?.storageCap;
+      if (typeof value === "number") {
+        total += value;
+      } else if (value !== null && value !== undefined) {
+        numeric = false;
+      }
+    });
+
+    return numeric ? total : null;
   }
 
   function loadRaw(key) {
@@ -210,8 +373,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 99999)}`;
   }
 
-  function binCapacity(level) {
-    return TIER1_BIN_CAPACITY[Number(level)] || 0;
+  function binCapacity(key, level) {
+    return resourceBinLevelData(key, level)?.storageCap ?? 0;
   }
 
   function rackEnergy(level) {
@@ -458,13 +621,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     grid.innerHTML = Object.entries(shop.bins)
       .map(([key, group]) => {
-        const totalCapacity = group.items.reduce(
-          (sum, item) => sum + binCapacity(item.level),
-          0
-        );
+        const totalCapacity = numericBinTotal(key, group.items);
 
         const detail = group.items
-          .map((item, index) => `#${index + 1} Nv.${item.level} = ${binCapacity(item.level)}`)
+          .map((item, index) => {
+            const data = resourceBinLevelData(key, item.level);
+            const cap = data?.storageCap ?? "—";
+            return `#${index + 1} Nv.${item.level} = ${displayBinCapacity(cap)}`;
+          })
           .join(" • ");
 
         const lowest =
@@ -472,10 +636,33 @@ document.addEventListener("DOMContentLoaded", () => {
             ? Math.min(...group.items.map(x => Number(x.level)))
             : null;
 
-        const next =
-          lowest && TIER1_BIN_CAPACITY[lowest + 1]
-            ? TIER1_BIN_CAPACITY[lowest + 1]
-            : null;
+        const currentData = lowest
+          ? resourceBinLevelData(key, lowest)
+          : null;
+
+        const nextData = lowest
+          ? resourceBinLevelData(key, lowest + 1)
+          : null;
+
+        const definition = resourceBinDefinition(key);
+        const maxLevel = definition?.maxLevel || 25;
+
+        const totalText =
+          !group.items.length
+            ? "0"
+            : totalCapacity !== null
+              ? formatNumber(totalCapacity)
+              : "Múltiplos recursos";
+
+        const nextText = nextData
+          ? displayBinCapacity(nextData.storageCap)
+          : lowest
+            ? `Máx. Nv.${maxLevel}`
+            : "—";
+
+        const purchaseText = definition?.extraPurchasePrices
+          ? `Compras extras: ${definition.extraPurchasePrices}`
+          : "";
 
         return `
           <article class="panel furniture-card resource-card">
@@ -489,28 +676,41 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="resource-stats">
                 <div>
                   <small>Capacidade total</small>
-                  <b>${formatNumber(totalCapacity)}</b>
+                  <b>${totalText}</b>
                 </div>
+
                 <div>
                   <small>Menor nível</small>
                   <b>${lowest ?? "—"}</b>
                 </div>
+
                 <div>
                   <small>Capacidade do menor</small>
-                  <b>${lowest ? binCapacity(lowest) : "—"}</b>
+                  <b>${currentData ? displayBinCapacity(currentData.storageCap) : "—"}</b>
                 </div>
+
                 <div>
                   <small>Após próximo upgrade</small>
-                  <b>${next ?? "—"}</b>
+                  <b>${nextText}</b>
                 </div>
               </div>
 
-              <small class="resource-source-note">
-                Capacidade base. Bônus externos não incluídos.
-              </small>
+              ${
+                lowest && nextData
+                  ? `<small class="resource-source-note">
+                       Próximo upgrade: ${nextData.goldCost ? `${formatNumber(nextData.goldCost)} ouro` : "custo especial"}
+                       ${nextData.upgradeTime ? ` • ${nextData.upgradeTime}` : ""}
+                       ${nextData.requiredBuilding ? ` • ${nextData.requiredBuilding}` : ""}
+                     </small>`
+                  : `<small class="resource-source-note">
+                       ${purchaseText || "Dados oficiais do Resource Bins."}
+                     </small>`
+              }
             </div>
 
-            <span class="priority-badge medium">MÉDIA</span>
+            <span class="priority-badge ${group.items.length ? "medium" : "low"}">
+              ${group.items.length ? "ATIVO" : "NÃO CADASTRADO"}
+            </span>
           </article>
         `;
       })
@@ -728,11 +928,21 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.appendChild(shopModal);
 
   function editorGroupHtml(type, key, group) {
+    const definition = type === "bin" ? resourceBinDefinition(key) : null;
+    const maxLevel = definition?.maxLevel || (type === "bin" ? 25 : 30);
+
     return `
-      <div class="tp-editor-group">
+      <div class="tp-editor-group" data-editor-group-key="${key}">
         <div class="tp-editor-group-title">
           <span>${group.icon}</span>
-          <strong>${group.name}</strong>
+          <div>
+            <strong>${group.name}</strong>
+            ${
+              type === "bin"
+                ? `<small>${definition?.title || "Recipiente"} • Nv. máx. ${maxLevel}</small>`
+                : ""
+            }
+          </div>
         </div>
 
         <div class="tp-individual-list">
@@ -756,7 +966,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <input
             type="number"
             min="1"
-            max="${type === "bin" ? 15 : 30}"
+            max="${type === "bin" ? (resourceBinDefinition(key)?.maxLevel || 25) : 30}"
             value="${item.level}"
             data-level-type="${type}"
             data-level-key="${key}"
@@ -789,10 +999,22 @@ document.addEventListener("DOMContentLoaded", () => {
       </section>
 
       <section class="tp-editor-section">
-        <h3>🔨 Recipientes</h3>
-        ${Object.entries(shop.bins)
-          .map(([key, group]) => editorGroupHtml("bin", key, group))
+        <h3>🔨 Recipientes básicos</h3>
+        ${["wood","iron","leather","herbs"]
+          .map(key => editorGroupHtml("bin", key, shop.bins[key]))
           .join("")}
+      </section>
+
+      <section class="tp-editor-section">
+        <h3>⚗️ Recipientes avançados</h3>
+        ${["steel","ironwood","fabric","oil","jewel","ether","essence","stardust"]
+          .map(key => editorGroupHtml("bin", key, shop.bins[key]))
+          .join("")}
+      </section>
+
+      <section class="tp-editor-section">
+        <h3>🐉 Recipientes especiais</h3>
+        ${editorGroupHtml("bin", "dragonHoard", shop.bins.dragonHoard)}
       </section>
 
       <section class="tp-editor-section">
@@ -1028,6 +1250,12 @@ document.addEventListener("DOMContentLoaded", () => {
       display:flex;align-items:center;gap:8px;margin-bottom:9px
     }
 
+    .tp-editor-group-title>div{min-width:0}
+    .tp-editor-group-title strong,.tp-editor-group-title small{display:block}
+    .tp-editor-group-title small{
+      margin-top:2px;color:#657181;font-size:9px;font-weight:600
+    }
+
     .tp-individual-list{display:grid;gap:7px}
 
     .tp-individual-item{
@@ -1106,7 +1334,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  updateDashboard();
+  loadResourceBinCatalog().finally(() => {
+    updateDashboard();
+  });
 });
 /* =========================================================
    TITANPATH - FABRICAÇÃO INTELIGENTE v0.3.1
@@ -1392,18 +1622,31 @@ document.addEventListener("DOMContentLoaded", () => {
     return crafting.projects.find(p => p.id === id) || null;
   }
 
-  const BASIC_BIN_CAPACITY = {
-    1: 35, 2: 41, 3: 47, 4: 53, 5: 59,
-    6: 65, 7: 77, 8: 89, 9: 101, 10: 113,
-    11: 125, 12: 145, 13: 165, 14: 185, 15: 205
-  };
-
   const SHOP_BIN_RESOURCE_MAP = {
     wood: "Madeira",
     iron: "Ferro",
     leather: "Couro",
-    herbs: "Ervas"
+    herbs: "Ervas",
+    steel: "Aço",
+    ironwood: "Madeira de Ferro",
+    fabric: "Tecido",
+    oil: "Óleo",
+    jewel: "Joias",
+    ether: "Éter",
+    essence: "Essência",
+    stardust: "Poeira Estelar"
   };
+
+  function advisorResourceBinDefinition(shopKey) {
+    const bins = window.TitanPathResourceBins?.bins || [];
+    return bins.find(bin => bin.key === shopKey) || null;
+  }
+
+  function advisorBinLevelData(shopKey, level) {
+    return advisorResourceBinDefinition(shopKey)
+      ?.levels
+      ?.find(item => Number(item.level) === Number(level)) || null;
+  }
 
   function loadCurrentShopForAdvisor() {
     try {
@@ -1422,10 +1665,10 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(SHOP_BIN_RESOURCE_MAP).forEach(([shopKey, resourceName]) => {
       const items = currentShop.bins?.[shopKey]?.items || [];
 
-      capacities[resourceName] = items.reduce(
-        (sum, item) => sum + Number(BASIC_BIN_CAPACITY[Number(item.level)] || 0),
-        0
-      );
+      capacities[resourceName] = items.reduce((sum, item) => {
+        const cap = advisorBinLevelData(shopKey, item.level)?.storageCap;
+        return sum + (typeof cap === "number" ? cap : 0);
+      }, 0);
     });
 
     return capacities;
@@ -1448,14 +1691,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     items.forEach((item, index) => {
       const level = Number(item.level || 1);
+      const current = advisorBinLevelData(shopKey, level);
+      const next = advisorBinLevelData(shopKey, level + 1);
 
       if (!best || level < best.level) {
         best = {
           resource: resourceName,
+          shopKey,
           index: index + 1,
           level,
-          currentCapacity: Number(BASIC_BIN_CAPACITY[level] || 0),
-          nextCapacity: Number(BASIC_BIN_CAPACITY[level + 1] || 0)
+          currentCapacity: current?.storageCap ?? 0,
+          nextCapacity: next?.storageCap ?? null,
+          nextGoldCost: next?.goldCost ?? null,
+          nextUpgradeTime: next?.upgradeTime ?? null,
+          nextRequiredBuilding: next?.requiredBuilding ?? null
         };
       }
     });
@@ -2103,7 +2352,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (bottleneck.bin) {
         const next = bottleneck.bin.nextCapacity
-          ? ` Se evoluir o recipiente #${bottleneck.bin.index} do Nv.${bottleneck.bin.level}, a capacidade individual passa de ${bottleneck.bin.currentCapacity} para ${bottleneck.bin.nextCapacity}.`
+          ? ` Se evoluir o recipiente #${bottleneck.bin.index} do Nv.${bottleneck.bin.level}, a capacidade individual passa de ${bottleneck.bin.currentCapacity} para ${bottleneck.bin.nextCapacity}.` +
+            `${bottleneck.bin.nextGoldCost ? ` Custo: ${fmt(bottleneck.bin.nextGoldCost)} ouro.` : ""}` +
+            `${bottleneck.bin.nextUpgradeTime ? ` Tempo: ${bottleneck.bin.nextUpgradeTime}.` : ""}` +
+            `${bottleneck.bin.nextRequiredBuilding ? ` Requisito: ${bottleneck.bin.nextRequiredBuilding}.` : ""}`
           : "";
 
         binText = next;
@@ -2179,7 +2431,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const effective = effectiveResources();
     const reserved = queuedReservedResources();
 
-    const basicResources = ["Ferro", "Madeira", "Couro", "Ervas"];
+    const preferredOrder = [
+      "Ferro","Madeira","Couro","Ervas",
+      "Aço","Madeira de Ferro","Tecido","Óleo",
+      "Joias","Éter","Essência","Poeira Estelar"
+    ];
+
+    const visibleResources = preferredOrder.filter(resource =>
+      ["Ferro","Madeira","Couro","Ervas"].includes(resource) ||
+      Number(capacities[resource] || 0) > 0 ||
+      Number(crafting.resources[resource] || 0) > 0
+    );
 
     card.innerHTML = `
       <div class="tp-smart-resource-header">
@@ -2191,7 +2453,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
 
       <div class="tp-smart-resource-grid">
-        ${basicResources.map(resource => `
+        ${visibleResources.map(resource => `
           <div>
             <span>${resource}</span>
             <strong>${fmt(effective[resource] || 0)} livres</strong>
@@ -3250,6 +3512,10 @@ document.addEventListener("DOMContentLoaded", () => {
       closeCraftingEditor();
       closeProjectEditor();
     }
+  });
+
+  document.addEventListener("titanpath:resourcebinsloaded", () => {
+    updateCraftingUI();
   });
 
   loadBlueprintCatalog().finally(() => {
