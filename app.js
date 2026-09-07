@@ -1,30 +1,20 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.2.1
-   Conta + Minha Loja + Editor + Recursos
+   TITANPATH - APP.JS v0.2.2
+   Loja individualizada + energia por rack + capacidades por bin
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  /* =======================================================
-     BASES DE DADOS
-  ======================================================= */
-
   const TIER1_BIN_CAPACITY = {
-    1: 35,
-    2: 41,
-    3: 47,
-    4: 53,
-    5: 59,
-    6: 65,
-    7: 77,
-    8: 89,
-    9: 101,
-    10: 113,
-    11: 125,
-    12: 145,
-    13: 165,
-    14: 185,
-    15: 205
+    1: 35, 2: 41, 3: 47, 4: 53, 5: 59,
+    6: 65, 7: 77, 8: 89, 9: 101, 10: 113,
+    11: 125, 12: 145, 13: 165, 14: 185, 15: 205
+  };
+
+  const RACK_ENERGY = {
+    1: 9, 2: 12, 3: 15, 4: 18, 5: 21,
+    6: 24, 7: 30, 8: 36, 9: 42, 10: 48,
+    11: 54, 12: 63, 13: 72, 14: 81, 15: 90
   };
 
   const defaultAccount = {
@@ -37,99 +27,167 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const defaultShop = {
     totalSlots: 24,
-
     racks: {
-      mannequin: { name: "Manequim", icon: "👕", quantity: 3, level: 3 },
-      table: { name: "Mesa", icon: "🪵", quantity: 3, level: 3 },
-      shelf: { name: "Prateleira", icon: "🗄️", quantity: 3, level: 3 },
-      vertical: { name: "Expositor Vertical", icon: "⚔️", quantity: 3, level: 3 }
+      mannequin: {
+        name: "Manequim",
+        icon: "👕",
+        items: [
+          { id: "mannequin-1", level: 3 },
+          { id: "mannequin-2", level: 3 },
+          { id: "mannequin-3", level: 3 }
+        ]
+      },
+      table: {
+        name: "Mesa",
+        icon: "🪵",
+        items: [
+          { id: "table-1", level: 3 },
+          { id: "table-2", level: 3 },
+          { id: "table-3", level: 3 }
+        ]
+      },
+      shelf: {
+        name: "Prateleira",
+        icon: "🗄️",
+        items: [
+          { id: "shelf-1", level: 3 },
+          { id: "shelf-2", level: 3 },
+          { id: "shelf-3", level: 3 }
+        ]
+      },
+      vertical: {
+        name: "Expositor Vertical",
+        icon: "⚔️",
+        items: [
+          { id: "vertical-1", level: 3 },
+          { id: "vertical-2", level: 3 },
+          { id: "vertical-3", level: 3 }
+        ]
+      }
     },
-
     bins: {
       wood: {
         name: "Madeira",
-        gameName: "Wood Bin",
         icon: "🪵",
-        quantity: 2,
-        level: 3
+        items: [
+          { id: "wood-1", level: 3 },
+          { id: "wood-2", level: 3 }
+        ]
       },
       iron: {
         name: "Ferro",
-        gameName: "Iron Bin",
         icon: "⛓️",
-        quantity: 2,
-        level: 3
+        items: [
+          { id: "iron-1", level: 3 },
+          { id: "iron-2", level: 3 }
+        ]
       },
       leather: {
         name: "Couro",
-        gameName: "Leather Bin",
         icon: "🟫",
-        quantity: 2,
-        level: 3
+        items: [
+          { id: "leather-1", level: 3 },
+          { id: "leather-2", level: 3 }
+        ]
       },
       herbs: {
         name: "Ervas",
-        gameName: "Herb Dryer",
         icon: "🌿",
-        quantity: 2,
-        level: 3
+        items: [
+          { id: "herbs-1", level: 3 },
+          { id: "herbs-2", level: 3 }
+        ]
       }
     },
-
-    chests: {
-      quantity: 3,
-      level: 2
-    },
-
-    counter: {
-      quantity: 1,
-      level: 3
-    }
+    chests: [
+      { id: "chest-1", level: 2 },
+      { id: "chest-2", level: 2 },
+      { id: "chest-3", level: 2 }
+    ],
+    counter: { id: "counter-1", level: 3 }
   };
 
-  let account = loadData("titanpath_account", defaultAccount);
-  let shop = loadData("titanpath_shop", defaultShop);
-
-  /* =======================================================
-     HELPERS
-  ======================================================= */
+  let account = loadAccount();
+  let shop = migrateShop(loadRaw("titanpath_shop"));
 
   function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
   }
 
-  function loadData(key, fallback) {
+  function loadRaw(key) {
     const saved = localStorage.getItem(key);
-
-    if (!saved) return clone(fallback);
-
+    if (!saved) return null;
     try {
-      return deepMerge(clone(fallback), JSON.parse(saved));
-    } catch (error) {
-      console.error(`Erro ao carregar ${key}:`, error);
-      return clone(fallback);
+      return JSON.parse(saved);
+    } catch {
+      return null;
     }
   }
 
-  function deepMerge(target, source) {
-    if (!source || typeof source !== "object") return target;
+  function loadAccount() {
+    const saved = loadRaw("titanpath_account");
+    return saved ? { ...clone(defaultAccount), ...saved } : clone(defaultAccount);
+  }
 
-    Object.keys(source).forEach(key => {
-      if (
-        source[key] &&
-        typeof source[key] === "object" &&
-        !Array.isArray(source[key])
-      ) {
-        if (!target[key] || typeof target[key] !== "object") {
-          target[key] = {};
-        }
-        deepMerge(target[key], source[key]);
-      } else {
-        target[key] = source[key];
-      }
-    });
+  function migrateShop(saved) {
+    if (!saved) return clone(defaultShop);
 
-    return target;
+    if (
+      saved.racks?.mannequin?.items &&
+      saved.bins?.iron?.items &&
+      Array.isArray(saved.chests)
+    ) {
+      return saved;
+    }
+
+    const next = clone(defaultShop);
+
+    if (saved.totalSlots) next.totalSlots = Number(saved.totalSlots);
+
+    if (saved.racks) {
+      Object.keys(next.racks).forEach(key => {
+        const old = saved.racks[key];
+        if (!old) return;
+        const qty = Math.max(0, Number(old.quantity || 0));
+        const lvl = Math.max(1, Number(old.level || 1));
+
+        next.racks[key].items = Array.from({ length: qty }, (_, i) => ({
+          id: `${key}-${i + 1}`,
+          level: lvl
+        }));
+      });
+    }
+
+    if (saved.bins) {
+      Object.keys(next.bins).forEach(key => {
+        const old = saved.bins[key];
+        if (!old) return;
+        const qty = Math.max(0, Number(old.quantity || 0));
+        const lvl = Math.max(1, Number(old.level || 1));
+
+        next.bins[key].items = Array.from({ length: qty }, (_, i) => ({
+          id: `${key}-${i + 1}`,
+          level: lvl
+        }));
+      });
+    }
+
+    if (saved.chests && !Array.isArray(saved.chests)) {
+      const qty = Math.max(0, Number(saved.chests.quantity || 0));
+      const lvl = Math.max(1, Number(saved.chests.level || 1));
+
+      next.chests = Array.from({ length: qty }, (_, i) => ({
+        id: `chest-${i + 1}`,
+        level: lvl
+      }));
+    }
+
+    if (saved.counter?.level) {
+      next.counter.level = Math.max(1, Number(saved.counter.level));
+    }
+
+    localStorage.setItem("titanpath_shop", JSON.stringify(next));
+    return next;
   }
 
   function saveAccount() {
@@ -148,237 +206,49 @@ document.addEventListener("DOMContentLoaded", () => {
     return Math.min(Math.max(value, min), max);
   }
 
-  function getBinCapacity(level) {
-    const safeLevel = clamp(Number(level) || 1, 1, 15);
-    return TIER1_BIN_CAPACITY[safeLevel] || 0;
+  function uid(prefix) {
+    return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 99999)}`;
   }
 
-  function getBinNextCapacity(level) {
-    const next = Number(level) + 1;
-    return TIER1_BIN_CAPACITY[next] || null;
+  function binCapacity(level) {
+    return TIER1_BIN_CAPACITY[Number(level)] || 0;
   }
 
-  function totalRacks() {
+  function rackEnergy(level) {
+    return RACK_ENERGY[Number(level)] || 0;
+  }
+
+  function rackCount() {
     return Object.values(shop.racks).reduce(
-      (sum, item) => sum + Number(item.quantity || 0),
+      (sum, group) => sum + group.items.length,
       0
     );
   }
 
-  function totalBins() {
+  function binCount() {
     return Object.values(shop.bins).reduce(
-      (sum, item) => sum + Number(item.quantity || 0),
+      (sum, group) => sum + group.items.length,
       0
     );
   }
 
   function usedSlots() {
-    return (
-      totalRacks() +
-      totalBins() +
-      Number(shop.chests.quantity || 0) +
-      Number(shop.counter.quantity || 0)
-    );
+    return rackCount() + binCount() + shop.chests.length + 1;
   }
 
   function freeSlots() {
-    return Math.max(0, Number(shop.totalSlots || 0) - usedSlots());
+    return Math.max(0, Number(shop.totalSlots) - usedSlots());
   }
 
-  /* =======================================================
-     CONTA / DASHBOARD
-  ======================================================= */
-
-  const merchantLevel = document.getElementById("merchantLevel");
-  const goldValue = document.getElementById("goldValue");
-  const plannerGoldValue = document.getElementById("plannerGoldValue");
-  const gemsValue = document.getElementById("gemsValue");
-  const energyValue = document.getElementById("energyValue");
-  const missionProgressValue = document.getElementById("missionProgressValue");
-  const currentMissionTitle = document.getElementById("currentMissionTitle");
-  const nextStepTitle = document.getElementById("nextStepTitle");
-  const nextStepDescription = document.getElementById("nextStepDescription");
-
-  function updateDashboard() {
-    if (merchantLevel) merchantLevel.textContent = account.level;
-
-    const levelBadge = document.querySelector(".level-badge");
-    if (levelBadge) levelBadge.textContent = account.level;
-
-    if (goldValue) goldValue.textContent = formatNumber(account.gold);
-    if (plannerGoldValue) plannerGoldValue.textContent = formatNumber(account.gold);
-    if (gemsValue) gemsValue.textContent = formatNumber(account.gems);
-    if (energyValue) energyValue.textContent = formatNumber(account.energy);
-
-    updateEnergyMission();
-    updateEvolution();
-    updateGoals();
-    updateShopDashboardSummary();
-  }
-
-  function updateEnergyMission() {
-    const progress = clamp(
-      Math.round((account.energy / account.energyGoal) * 100),
-      0,
-      100
+  function calculatedRackEnergy() {
+    return Object.values(shop.racks).reduce(
+      (sum, group) =>
+        sum + group.items.reduce(
+          (subtotal, item) => subtotal + rackEnergy(item.level),
+          0
+        ),
+      0
     );
-
-    if (missionProgressValue) {
-      missionProgressValue.textContent = `${progress}%`;
-    }
-
-    const circle = document.querySelector(".circle-progress");
-    if (circle) {
-      const degrees = Math.round((progress / 100) * 360);
-      circle.style.background = `
-        conic-gradient(
-          #2aa7ff 0deg,
-          #7b61ff ${degrees}deg,
-          rgba(255,255,255,.08) ${degrees}deg
-        )
-      `;
-    }
-
-    if (!currentMissionTitle || !nextStepTitle || !nextStepDescription) return;
-
-    if (account.energy < 200) {
-      currentMissionTitle.textContent = "Aumentar sua energia";
-      nextStepTitle.textContent = "Continue melhorando seus expositores";
-      nextStepDescription.textContent =
-        `Você possui ${formatNumber(account.energy)} de energia. Continue evoluindo seus expositores e reavalie seus recursos sem comprometer todo o ouro.`;
-    } else if (account.energy < account.energyGoal) {
-      currentMissionTitle.textContent = "Reta final para a meta de energia";
-      nextStepTitle.textContent =
-        `Faltam ${formatNumber(account.energyGoal - account.energy)} de energia`;
-      nextStepDescription.textContent =
-        "Sua estrutura já avançou. Continue melhorando os expositores com melhor custo-benefício e mantenha uma reserva de ouro.";
-    } else {
-      currentMissionTitle.textContent = "Meta de energia concluída!";
-      nextStepTitle.textContent = `${formatNumber(account.energyGoal)} de energia alcançados`;
-      nextStepDescription.textContent =
-        "A meta de energia foi concluída. O próximo foco deve ser definido pela sua fabricação, investimentos, nível e patrimônio.";
-    }
-  }
-
-  function updateEvolution() {
-    const cards = document.querySelectorAll(".evolution-card");
-
-    if (cards.length >= 4) {
-      const current = cards[2].querySelector("strong");
-      const target = cards[3].querySelector("strong");
-
-      if (current) current.textContent = `${formatNumber(account.energy)} ⚡`;
-      if (target) target.textContent = `${formatNumber(account.energyGoal)} ⚡`;
-    }
-  }
-
-  function updateGoals() {
-    const goals = document.querySelectorAll(".goal-row");
-
-    if (goals[0]) {
-      const percentage = clamp(
-        Math.round((account.energy / account.energyGoal) * 100),
-        0,
-        100
-      );
-
-      const small = goals[0].querySelector("small");
-      const bar = goals[0].querySelector(".progress-fill");
-      const text = goals[0].querySelector(".goal-progress span");
-
-      if (small) small.textContent = `${account.energy} / ${account.energyGoal}`;
-      if (bar) bar.style.width = `${percentage}%`;
-      if (text) text.textContent = `${percentage}%`;
-    }
-
-    if (goals[1]) {
-      const percentage =
-        account.level >= 25
-          ? 100
-          : clamp(Math.round(((account.level - 22) / 3) * 100), 0, 100);
-
-      const small = goals[1].querySelector("small");
-      const bar = goals[1].querySelector(".progress-fill");
-      const text = goals[1].querySelector(".goal-progress span");
-
-      if (small) small.textContent = `Mercador nível ${account.level}`;
-      if (bar) bar.style.width = `${percentage}%`;
-      if (text) text.textContent = `${percentage}%`;
-    }
-
-    if (goals[2]) {
-      const goldTarget = 5000000;
-      const percentage = clamp(
-        Math.round((account.gold / goldTarget) * 100),
-        0,
-        100
-      );
-
-      const small = goals[2].querySelector("small");
-      const bar = goals[2].querySelector(".progress-fill");
-      const text = goals[2].querySelector(".goal-progress span");
-
-      if (small) {
-        small.textContent = `${formatNumber(account.gold)} / 5.000.000`;
-      }
-      if (bar) bar.style.width = `${percentage}%`;
-      if (text) text.textContent = `${percentage}%`;
-    }
-
-    if (goals[3]) {
-      const percentage =
-        account.level >= 30
-          ? 100
-          : clamp(Math.round(((account.level - 22) / 8) * 100), 0, 100);
-
-      const bar = goals[3].querySelector(".progress-fill");
-      const text = goals[3].querySelector(".goal-progress span");
-
-      if (bar) bar.style.width = `${percentage}%`;
-      if (text) text.textContent = `${percentage}%`;
-    }
-  }
-
-  /* =======================================================
-     MINHA LOJA
-  ======================================================= */
-
-  function updateShopDashboardSummary() {
-    const used = usedSlots();
-    const total = Number(shop.totalSlots || 24);
-    const percent = clamp(Math.round((used / total) * 100), 0, 100);
-
-    setText("shopUsedSlots", used);
-    setText("shopTotalSlots", total);
-
-    const dashboardBar = document.getElementById("shopSlotsBar");
-    if (dashboardBar) dashboardBar.style.width = `${percent}%`;
-
-    setText("shopEnergyValue", formatNumber(account.energy));
-    setText("shopRackCount", totalRacks());
-    setText("shopPageUsedSlots", used);
-    setText("shopPageTotalSlots", total);
-    setText("shopChestCount", Number(shop.chests.quantity || 0));
-    setText("shopSlotCounterUsed", used);
-    setText("legendRackCount", totalRacks());
-    setText("legendBinCount", totalBins());
-    setText("legendChestCount", Number(shop.chests.quantity || 0));
-
-    const freeText = document.getElementById("shopFreeSlotsText");
-    if (freeText) {
-      freeText.textContent =
-        freeSlots() === 1
-          ? "1 espaço livre"
-          : `${freeSlots()} espaços livres`;
-    }
-
-    const spaceBar = document.getElementById("shopSpaceBar");
-    if (spaceBar) spaceBar.style.width = `${percent}%`;
-
-    renderRacks();
-    renderBins();
-    renderStorage();
-    updateShopAdvisor();
   }
 
   function setText(id, value) {
@@ -386,26 +256,199 @@ document.addEventListener("DOMContentLoaded", () => {
     if (el) el.textContent = value;
   }
 
+  function updateDashboard() {
+    setText("merchantLevel", account.level);
+    setText("goldValue", formatNumber(account.gold));
+    setText("plannerGoldValue", formatNumber(account.gold));
+    setText("gemsValue", formatNumber(account.gems));
+    setText("energyValue", formatNumber(account.energy));
+
+    const badge = document.querySelector(".level-badge");
+    if (badge) badge.textContent = account.level;
+
+    updateMission();
+    updateEvolution();
+    updateGoals();
+    updateShop();
+  }
+
+  function updateMission() {
+    const progress = clamp(
+      Math.round((account.energy / account.energyGoal) * 100),
+      0,
+      100
+    );
+
+    setText("missionProgressValue", `${progress}%`);
+
+    const circle = document.querySelector(".circle-progress");
+    if (circle) {
+      const deg = Math.round((progress / 100) * 360);
+      circle.style.background =
+        `conic-gradient(#2aa7ff 0deg,#7b61ff ${deg}deg,rgba(255,255,255,.08) ${deg}deg)`;
+    }
+
+    const title = document.getElementById("currentMissionTitle");
+    const step = document.getElementById("nextStepTitle");
+    const desc = document.getElementById("nextStepDescription");
+
+    if (!title || !step || !desc) return;
+
+    if (account.energy < account.energyGoal) {
+      title.textContent = "Aumentar sua energia";
+      step.textContent = `Faltam ${account.energyGoal - account.energy} de energia`;
+      desc.textContent =
+        "Use Minha Loja para localizar os racks de menor nível e priorizar os upgrades com melhor retorno.";
+    } else {
+      title.textContent = "Meta de energia concluída";
+      step.textContent = "Reavaliar a próxima prioridade";
+      desc.textContent =
+        "A meta atual foi atingida. O próximo foco deve considerar fabricação, investimentos e heróis.";
+    }
+  }
+
+  function updateEvolution() {
+    const cards = document.querySelectorAll(".evolution-card");
+    if (cards.length >= 4) {
+      const current = cards[2].querySelector("strong");
+      const target = cards[3].querySelector("strong");
+      if (current) current.textContent = `${account.energy} ⚡`;
+      if (target) target.textContent = `${account.energyGoal} ⚡`;
+    }
+  }
+
+  function updateGoals() {
+    const goals = document.querySelectorAll(".goal-row");
+
+    if (goals[0]) {
+      const pct = clamp(
+        Math.round((account.energy / account.energyGoal) * 100),
+        0,
+        100
+      );
+      const small = goals[0].querySelector("small");
+      const bar = goals[0].querySelector(".progress-fill");
+      const text = goals[0].querySelector(".goal-progress span");
+      if (small) small.textContent = `${account.energy} / ${account.energyGoal}`;
+      if (bar) bar.style.width = `${pct}%`;
+      if (text) text.textContent = `${pct}%`;
+    }
+
+    if (goals[2]) {
+      const pct = clamp(
+        Math.round((account.gold / 5000000) * 100),
+        0,
+        100
+      );
+      const small = goals[2].querySelector("small");
+      const bar = goals[2].querySelector(".progress-fill");
+      const text = goals[2].querySelector(".goal-progress span");
+      if (small) small.textContent = `${formatNumber(account.gold)} / 5.000.000`;
+      if (bar) bar.style.width = `${pct}%`;
+      if (text) text.textContent = `${pct}%`;
+    }
+  }
+
+  function updateShop() {
+    const used = usedSlots();
+    const total = Number(shop.totalSlots);
+    const pct = clamp(Math.round((used / total) * 100), 0, 100);
+
+    setText("shopUsedSlots", used);
+    setText("shopTotalSlots", total);
+    setText("shopEnergyValue", account.energy);
+    setText("shopRackCount", rackCount());
+    setText("shopPageUsedSlots", used);
+    setText("shopPageTotalSlots", total);
+    setText("shopChestCount", shop.chests.length);
+    setText("shopSlotCounterUsed", used);
+    setText("legendRackCount", rackCount());
+    setText("legendBinCount", binCount());
+    setText("legendChestCount", shop.chests.length);
+
+    const free = document.getElementById("shopFreeSlotsText");
+    if (free) {
+      free.textContent =
+        `${freeSlots()} ${freeSlots() === 1 ? "espaço livre" : "espaços livres"}`;
+    }
+
+    const bar1 = document.getElementById("shopSlotsBar");
+    const bar2 = document.getElementById("shopSpaceBar");
+
+    if (bar1) bar1.style.width = `${pct}%`;
+    if (bar2) bar2.style.width = `${pct}%`;
+
+    renderRacks();
+    renderBins();
+    renderStorage();
+    renderEnergySummary();
+    updateAdvisor();
+  }
+
+  function renderEnergySummary() {
+    document.getElementById("tpEnergyCompare")?.remove();
+
+    const grid = document.querySelector("#page-shop .shop-summary-grid");
+    if (!grid) return;
+
+    const card = document.createElement("article");
+    card.className = "panel shop-summary-card";
+    card.id = "tpEnergyCompare";
+    card.innerHTML = `
+      <span>🧮 Energia base dos racks</span>
+      <strong>${formatNumber(calculatedRackEnergy())}</strong>
+      <small>Calculada pelos níveis cadastrados</small>
+    `;
+
+    grid.appendChild(card);
+  }
+
   function renderRacks() {
     const grid = document.getElementById("rackGrid");
     if (!grid) return;
 
     grid.innerHTML = Object.entries(shop.racks)
-      .map(([key, item]) => `
-        <article class="panel furniture-card">
-          <div class="furniture-icon">${item.icon}</div>
+      .map(([key, group]) => {
+        const totalEnergy = group.items.reduce(
+          (sum, item) => sum + rackEnergy(item.level),
+          0
+        );
 
-          <div class="furniture-info">
-            <span>${item.name}</span>
-            <strong>${item.quantity} ${Number(item.quantity) === 1 ? "unidade" : "unidades"}</strong>
-            <small>Nível configurado: ${item.level}</small>
-          </div>
+        const details = group.items
+          .map((item, index) => `#${index + 1} Nv.${item.level} (${rackEnergy(item.level)}⚡)`)
+          .join(" • ");
 
-          <span class="priority-badge ${account.energy < account.energyGoal ? "high" : "medium"}">
-            ${account.energy < account.energyGoal ? "ALTA" : "MÉDIA"}
-          </span>
-        </article>
-      `)
+        const lowest =
+          group.items.length
+            ? Math.min(...group.items.map(x => Number(x.level)))
+            : null;
+
+        return `
+          <article class="panel furniture-card">
+            <div class="furniture-icon">${group.icon}</div>
+            <div class="furniture-info">
+              <span>${group.name}</span>
+              <strong>${group.items.length} ${group.items.length === 1 ? "unidade" : "unidades"}</strong>
+              <small>${details || "Nenhum cadastrado"}</small>
+
+              <div class="resource-stats">
+                <div>
+                  <small>Energia total</small>
+                  <b>${formatNumber(totalEnergy)} ⚡</b>
+                </div>
+                <div>
+                  <small>Menor nível</small>
+                  <b>${lowest ?? "—"}</b>
+                </div>
+              </div>
+            </div>
+
+            <span class="priority-badge ${account.energy < account.energyGoal ? "high" : "medium"}">
+              ${account.energy < account.energyGoal ? "ALTA" : "MÉDIA"}
+            </span>
+          </article>
+        `;
+      })
       .join("");
   }
 
@@ -414,48 +457,56 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!grid) return;
 
     grid.innerHTML = Object.entries(shop.bins)
-      .map(([key, item]) => {
-        const capacityEach = getBinCapacity(item.level);
-        const totalCapacity = capacityEach * Number(item.quantity || 0);
-        const nextCapacity = getBinNextCapacity(item.level);
+      .map(([key, group]) => {
+        const totalCapacity = group.items.reduce(
+          (sum, item) => sum + binCapacity(item.level),
+          0
+        );
 
-        const nextGain =
-          nextCapacity !== null
-            ? (nextCapacity - capacityEach) * Number(item.quantity || 0)
+        const detail = group.items
+          .map((item, index) => `#${index + 1} Nv.${item.level} = ${binCapacity(item.level)}`)
+          .join(" • ");
+
+        const lowest =
+          group.items.length
+            ? Math.min(...group.items.map(x => Number(x.level)))
+            : null;
+
+        const next =
+          lowest && TIER1_BIN_CAPACITY[lowest + 1]
+            ? TIER1_BIN_CAPACITY[lowest + 1]
             : null;
 
         return `
           <article class="panel furniture-card resource-card">
-            <div class="furniture-icon">${item.icon}</div>
+            <div class="furniture-icon">${group.icon}</div>
 
             <div class="furniture-info">
-              <span>${item.name}</span>
-              <strong>${item.quantity} ${Number(item.quantity) === 1 ? "recipiente" : "recipientes"} • Nv.${item.level}</strong>
+              <span>${group.name}</span>
+              <strong>${group.items.length} ${group.items.length === 1 ? "recipiente" : "recipientes"}</strong>
+              <small>${detail || "Nenhum cadastrado"}</small>
 
               <div class="resource-stats">
-                <div>
-                  <small>Por recipiente</small>
-                  <b>${formatNumber(capacityEach)}</b>
-                </div>
-
                 <div>
                   <small>Capacidade total</small>
                   <b>${formatNumber(totalCapacity)}</b>
                 </div>
-
                 <div>
-                  <small>Próximo nível</small>
-                  <b>${nextCapacity !== null ? formatNumber(nextCapacity) : "Máx. base"}</b>
+                  <small>Menor nível</small>
+                  <b>${lowest ?? "—"}</b>
                 </div>
-
                 <div>
-                  <small>Ganho total</small>
-                  <b>${nextGain !== null ? `+${formatNumber(nextGain)}` : "—"}</b>
+                  <small>Capacidade do menor</small>
+                  <b>${lowest ? binCapacity(lowest) : "—"}</b>
+                </div>
+                <div>
+                  <small>Após próximo upgrade</small>
+                  <b>${next ?? "—"}</b>
                 </div>
               </div>
 
               <small class="resource-source-note">
-                Capacidade base; bônus de guilda não incluído.
+                Capacidade base. Bônus externos não incluídos.
               </small>
             </div>
 
@@ -467,20 +518,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderStorage() {
-    const cards = document.querySelectorAll("#page-shop .shop-section");
+    const sections = document.querySelectorAll("#page-shop .shop-section");
+    if (sections.length < 3) return;
 
-    if (cards.length < 3) return;
+    const grid = sections[2].querySelector(".furniture-grid");
+    if (!grid) return;
 
-    const storageGrid = cards[2].querySelector(".furniture-grid");
-    if (!storageGrid) return;
+    const chestLevels = shop.chests
+      .map((x, i) => `#${i + 1} Nv.${x.level}`)
+      .join(" • ");
 
-    storageGrid.innerHTML = `
+    grid.innerHTML = `
       <article class="panel furniture-card">
         <div class="furniture-icon">📦</div>
         <div class="furniture-info">
           <span>Baús</span>
-          <strong>${shop.chests.quantity} ${Number(shop.chests.quantity) === 1 ? "unidade" : "unidades"}</strong>
-          <small>Nível configurado: ${shop.chests.level}</small>
+          <strong>${shop.chests.length} ${shop.chests.length === 1 ? "unidade" : "unidades"}</strong>
+          <small>${chestLevels || "Nenhum cadastrado"}</small>
         </div>
         <span class="priority-badge low">BAIXA</span>
       </article>
@@ -489,61 +543,59 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="furniture-icon">🧑‍💼</div>
         <div class="furniture-info">
           <span>Balcão</span>
-          <strong>${shop.counter.quantity} unidade</strong>
-          <small>Nível configurado: ${shop.counter.level}</small>
+          <strong>1 unidade</strong>
+          <small>Nv.${shop.counter.level}</small>
         </div>
         <span class="priority-badge medium">MÉDIA</span>
       </article>
     `;
   }
 
-  function updateShopAdvisor() {
-    const advisor = document.getElementById("shopAdvisorText");
-    if (!advisor) return;
+  function updateAdvisor() {
+    const el = document.getElementById("shopAdvisorText");
+    if (!el) return;
 
-    const used = usedSlots();
-    const total = Number(shop.totalSlots || 24);
+    let lowestRack = null;
 
-    let message = "";
+    Object.values(shop.racks).forEach(group => {
+      group.items.forEach((item, index) => {
+        if (!lowestRack || item.level < lowestRack.level) {
+          lowestRack = {
+            name: group.name,
+            index: index + 1,
+            level: Number(item.level)
+          };
+        }
+      });
+    });
 
-    if (used > total) {
-      message =
-        `Sua configuração usa ${used}/${total} espaços. Você excedeu o limite em ${used - total}. Reduza móveis antes de considerar novos upgrades.`;
-    } else if (account.energy < account.energyGoal) {
-      message =
-        `Você está com ${formatNumber(account.energy)} de energia e ${totalRacks()} expositores. ` +
-        `A meta atual é ${formatNumber(account.energyGoal)}. Priorize melhorar níveis dos expositores, ` +
-        `mas mantenha recipientes suficientes para não travar seus ${4} slots de fabricação. ` +
-        `Hoje sua loja usa ${used}/${total} espaços e possui ${freeSlots()} livres.`;
-    } else {
-      message =
-        `Sua meta de ${formatNumber(account.energyGoal)} de energia já foi alcançada. ` +
-        `Agora vale priorizar capacidade de fabricação, investimentos e eficiência dos heróis antes de adicionar mais expositores.`;
+    if (usedSlots() > shop.totalSlots) {
+      el.textContent =
+        `Sua loja usa ${usedSlots()}/${shop.totalSlots} espaços. Corrija o excesso antes de adicionar novos móveis.`;
+      return;
     }
 
-    advisor.textContent = message;
+    if (account.energy < account.energyGoal && lowestRack) {
+      el.textContent =
+        `Energia real informada: ${account.energy}. Energia base estimada pelos racks: ${calculatedRackEnergy()}. ` +
+        `O rack de menor nível é ${lowestRack.name} #${lowestRack.index}, Nv.${lowestRack.level}. ` +
+        `Esse é o primeiro candidato para revisão. A energia real continua separada porque bônus externos podem alterar o valor final no jogo.`;
+      return;
+    }
+
+    el.textContent =
+      `Sua loja usa ${usedSlots()}/${shop.totalSlots} espaços. Continue comparando energia, capacidade de recursos e custo dos próximos upgrades antes de investir.`;
   }
 
-  /* =======================================================
-     NAVEGAÇÃO
-  ======================================================= */
-
   function openPage(pageName) {
-    document.querySelectorAll(".page").forEach(page => {
-      page.classList.remove("active");
-    });
+    document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
 
     const target = document.getElementById(`page-${pageName}`);
     if (target) target.classList.add("active");
 
-    document
-      .querySelectorAll(".nav-item, .mobile-nav-item")
-      .forEach(button => {
-        button.classList.toggle(
-          "active",
-          button.dataset.page === pageName
-        );
-      });
+    document.querySelectorAll(".nav-item, .mobile-nav-item").forEach(button => {
+      button.classList.toggle("active", button.dataset.page === pageName);
+    });
 
     closeSidebar();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -551,15 +603,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll("[data-page]").forEach(button => {
     button.addEventListener("click", () => {
-      const page = button.dataset.page;
-      if (page) openPage(page);
+      if (button.dataset.page) openPage(button.dataset.page);
     });
   });
 
   document.querySelectorAll("[data-go]").forEach(button => {
     button.addEventListener("click", () => {
-      const page = button.dataset.go;
-      if (page) openPage(page);
+      if (button.dataset.go) openPage(button.dataset.go);
     });
   });
 
@@ -571,59 +621,43 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.remove("sidebar-open");
   }
 
-  const menuButton = document.getElementById("menuButton");
-  const mobileMoreButton = document.getElementById("mobileMoreButton");
-  const sidebarOverlay = document.getElementById("sidebarOverlay");
-
-  if (menuButton) menuButton.addEventListener("click", openSidebar);
-  if (mobileMoreButton) mobileMoreButton.addEventListener("click", openSidebar);
-  if (sidebarOverlay) sidebarOverlay.addEventListener("click", closeSidebar);
-
-  /* =======================================================
-     EDITOR DE CONTA
-  ======================================================= */
+  document.getElementById("menuButton")?.addEventListener("click", openSidebar);
+  document.getElementById("mobileMoreButton")?.addEventListener("click", openSidebar);
+  document.getElementById("sidebarOverlay")?.addEventListener("click", closeSidebar);
 
   const editAccountButton = document.createElement("button");
   editAccountButton.id = "editAccountButton";
   editAccountButton.innerHTML = "✏️";
   editAccountButton.title = "Editar dados da conta";
-  editAccountButton.setAttribute("aria-label", "Editar conta");
 
-  const topbarActions = document.querySelector(".topbar-actions");
-  if (topbarActions) topbarActions.prepend(editAccountButton);
+  document.querySelector(".topbar-actions")?.prepend(editAccountButton);
 
   const accountModal = document.createElement("div");
   accountModal.id = "accountEditor";
   accountModal.innerHTML = `
     <div class="tp-modal-overlay"></div>
-
     <div class="tp-modal">
       <div class="tp-modal-header">
         <div>
           <span>MINHA CONTA</span>
           <h2>Editar progresso</h2>
         </div>
-
-        <button id="closeAccountEditor" aria-label="Fechar">✕</button>
+        <button id="closeAccountEditor">✕</button>
       </div>
 
       <div class="tp-form">
         <label>Nível do Mercador
           <input type="number" id="editLevel" min="1">
         </label>
-
         <label>Ouro
           <input type="number" id="editGold" min="0">
         </label>
-
         <label>Gemas
           <input type="number" id="editGems" min="0">
         </label>
-
-        <label>Energia máxima
+        <label>Energia real no jogo
           <input type="number" id="editEnergy" min="0">
         </label>
-
         <button id="saveAccountButton" class="tp-save-button">
           SALVAR ALTERAÇÕES
         </button>
@@ -649,177 +683,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   editAccountButton.addEventListener("click", openAccountEditor);
+  document.getElementById("closeAccountEditor").addEventListener("click", closeAccountEditor);
+  accountModal.querySelector(".tp-modal-overlay").addEventListener("click", closeAccountEditor);
 
-  document
-    .getElementById("closeAccountEditor")
-    .addEventListener("click", closeAccountEditor);
+  document.getElementById("saveAccountButton").addEventListener("click", () => {
+    account.level = Math.max(1, Number(document.getElementById("editLevel").value));
+    account.gold = Math.max(0, Number(document.getElementById("editGold").value));
+    account.gems = Math.max(0, Number(document.getElementById("editGems").value));
+    account.energy = Math.max(0, Number(document.getElementById("editEnergy").value));
 
-  accountModal
-    .querySelector(".tp-modal-overlay")
-    .addEventListener("click", closeAccountEditor);
-
-  document
-    .getElementById("saveAccountButton")
-    .addEventListener("click", () => {
-      const newLevel = Number(document.getElementById("editLevel").value);
-      const newGold = Number(document.getElementById("editGold").value);
-      const newGems = Number(document.getElementById("editGems").value);
-      const newEnergy = Number(document.getElementById("editEnergy").value);
-
-      if (
-        newLevel < 1 ||
-        newGold < 0 ||
-        newGems < 0 ||
-        newEnergy < 0
-      ) {
-        alert("Confira os valores informados.");
-        return;
-      }
-
-      account.level = newLevel;
-      account.gold = newGold;
-      account.gems = newGems;
-      account.energy = newEnergy;
-
-      saveAccount();
-      updateDashboard();
-      closeAccountEditor();
-    });
-
-  /* =======================================================
-     EDITOR DA LOJA
-  ======================================================= */
+    saveAccount();
+    updateDashboard();
+    closeAccountEditor();
+  });
 
   const shopModal = document.createElement("div");
   shopModal.id = "shopEditor";
-
-  const rackFields = Object.entries(shop.racks)
-    .map(([key, item]) => `
-      <div class="tp-edit-row">
-        <div class="tp-edit-name">
-          <span>${item.icon}</span>
-          <strong>${item.name}</strong>
-        </div>
-
-        <label>
-          Quantidade
-          <input type="number" min="0" max="30" id="shop_${key}_qty">
-        </label>
-
-        <label>
-          Nível
-          <input type="number" min="1" max="30" id="shop_${key}_lvl">
-        </label>
-      </div>
-    `)
-    .join("");
-
-  const binFields = Object.entries(shop.bins)
-    .map(([key, item]) => `
-      <div class="tp-edit-row">
-        <div class="tp-edit-name">
-          <span>${item.icon}</span>
-          <strong>${item.name}</strong>
-        </div>
-
-        <label>
-          Quantidade
-          <input type="number" min="0" max="10" id="shop_${key}_qty">
-        </label>
-
-        <label>
-          Nível
-          <input type="number" min="1" max="15" id="shop_${key}_lvl">
-        </label>
-      </div>
-    `)
-    .join("");
-
   shopModal.innerHTML = `
     <div class="tp-modal-overlay"></div>
-
     <div class="tp-modal tp-shop-modal">
       <div class="tp-modal-header">
         <div>
           <span>MINHA LOJA</span>
-          <h2>Editar configuração</h2>
+          <h2>Editar móveis individualmente</h2>
         </div>
-
-        <button id="closeShopEditor" aria-label="Fechar">✕</button>
+        <button id="closeShopEditor">✕</button>
       </div>
 
-      <div class="tp-shop-editor-body">
-        <section class="tp-editor-section">
-          <h3>⚡ Expositores</h3>
-          ${rackFields}
-        </section>
-
-        <section class="tp-editor-section">
-          <h3>🔨 Recipientes de recursos</h3>
-          <p class="tp-editor-help">
-            O TitanPath calcula automaticamente a capacidade base pelo nível.
-          </p>
-          ${binFields}
-        </section>
-
-        <section class="tp-editor-section">
-          <h3>📦 Armazenamento</h3>
-
-          <div class="tp-edit-row">
-            <div class="tp-edit-name">
-              <span>📦</span>
-              <strong>Baús</strong>
-            </div>
-
-            <label>
-              Quantidade
-              <input type="number" min="0" max="30" id="shop_chests_qty">
-            </label>
-
-            <label>
-              Nível
-              <input type="number" min="1" max="30" id="shop_chests_lvl">
-            </label>
-          </div>
-
-          <div class="tp-edit-row">
-            <div class="tp-edit-name">
-              <span>🧑‍💼</span>
-              <strong>Balcão</strong>
-            </div>
-
-            <label>
-              Quantidade
-              <input type="number" value="1" disabled>
-            </label>
-
-            <label>
-              Nível
-              <input type="number" min="1" max="30" id="shop_counter_lvl">
-            </label>
-          </div>
-        </section>
-
-        <section class="tp-editor-section">
-          <h3>🏪 Limite da loja</h3>
-
-          <div class="tp-edit-row single">
-            <div class="tp-edit-name">
-              <span>📐</span>
-              <strong>Espaços disponíveis</strong>
-            </div>
-
-            <label>
-              Total
-              <input type="number" min="1" max="100" id="shop_total_slots">
-            </label>
-          </div>
-        </section>
-      </div>
+      <div class="tp-shop-editor-body" id="shopEditorBody"></div>
 
       <div class="tp-shop-editor-footer">
         <div>
-          <small>Prévia de ocupação</small>
+          <small>Ocupação</small>
           <strong id="shopEditorPreview">0/24</strong>
         </div>
 
@@ -832,24 +727,198 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.body.appendChild(shopModal);
 
+  function editorGroupHtml(type, key, group) {
+    return `
+      <div class="tp-editor-group">
+        <div class="tp-editor-group-title">
+          <span>${group.icon}</span>
+          <strong>${group.name}</strong>
+        </div>
+
+        <div class="tp-individual-list">
+          ${group.items.map((item, i) => individualItemHtml(type, key, item, i)).join("")}
+        </div>
+
+        <button class="tp-add-item" data-add-type="${type}" data-add-key="${key}">
+          + Adicionar ${type === "bin" ? "recipiente" : "móvel"}
+        </button>
+      </div>
+    `;
+  }
+
+  function individualItemHtml(type, key, item, index) {
+    return `
+      <div class="tp-individual-item">
+        <span>#${index + 1}</span>
+
+        <label>
+          Nível
+          <input
+            type="number"
+            min="1"
+            max="${type === "bin" ? 15 : 30}"
+            value="${item.level}"
+            data-level-type="${type}"
+            data-level-key="${key}"
+            data-level-index="${index}"
+          >
+        </label>
+
+        <button
+          class="tp-remove-item"
+          data-remove-type="${type}"
+          data-remove-key="${key}"
+          data-remove-index="${index}"
+        >
+          Guardar
+        </button>
+      </div>
+    `;
+  }
+
+  function renderShopEditor() {
+    const body = document.getElementById("shopEditorBody");
+    if (!body) return;
+
+    body.innerHTML = `
+      <section class="tp-editor-section">
+        <h3>⚡ Expositores</h3>
+        ${Object.entries(shop.racks)
+          .map(([key, group]) => editorGroupHtml("rack", key, group))
+          .join("")}
+      </section>
+
+      <section class="tp-editor-section">
+        <h3>🔨 Recipientes</h3>
+        ${Object.entries(shop.bins)
+          .map(([key, group]) => editorGroupHtml("bin", key, group))
+          .join("")}
+      </section>
+
+      <section class="tp-editor-section">
+        <h3>📦 Baús</h3>
+        <div class="tp-individual-list">
+          ${shop.chests.map((item, i) => individualItemHtml("chest", "chests", item, i)).join("")}
+        </div>
+        <button class="tp-add-item" data-add-type="chest" data-add-key="chests">
+          + Adicionar baú
+        </button>
+      </section>
+
+      <section class="tp-editor-section">
+        <h3>🧑‍💼 Balcão</h3>
+        <div class="tp-edit-row single">
+          <div class="tp-edit-name"><strong>Balcão único</strong></div>
+          <label>Nível
+            <input type="number" min="1" max="30" id="counterLevelInput" value="${shop.counter.level}">
+          </label>
+        </div>
+      </section>
+
+      <section class="tp-editor-section">
+        <h3>🏪 Limite da loja</h3>
+        <div class="tp-edit-row single">
+          <div class="tp-edit-name"><strong>Espaços disponíveis</strong></div>
+          <label>Total
+            <input type="number" min="1" max="100" id="totalSlotsInput" value="${shop.totalSlots}">
+          </label>
+        </div>
+      </section>
+    `;
+
+    bindShopEditorActions();
+    updateEditorPreview();
+  }
+
+  function syncEditorLevels() {
+    document.querySelectorAll("[data-level-type]").forEach(input => {
+      const type = input.dataset.levelType;
+      const key = input.dataset.levelKey;
+      const index = Number(input.dataset.levelIndex);
+      const value = Math.max(1, Number(input.value || 1));
+
+      if (type === "rack" && shop.racks[key]?.items[index]) {
+        shop.racks[key].items[index].level = value;
+      }
+
+      if (type === "bin" && shop.bins[key]?.items[index]) {
+        shop.bins[key].items[index].level = value;
+      }
+
+      if (type === "chest" && shop.chests[index]) {
+        shop.chests[index].level = value;
+      }
+    });
+
+    const counter = document.getElementById("counterLevelInput");
+    const total = document.getElementById("totalSlotsInput");
+
+    if (counter) shop.counter.level = Math.max(1, Number(counter.value || 1));
+    if (total) shop.totalSlots = Math.max(1, Number(total.value || 1));
+  }
+
+  function bindShopEditorActions() {
+    document.querySelectorAll("[data-add-type]").forEach(button => {
+      button.addEventListener("click", () => {
+        syncEditorLevels();
+
+        const type = button.dataset.addType;
+        const key = button.dataset.addKey;
+
+        if (type === "rack") {
+          shop.racks[key].items.push({ id: uid(key), level: 1 });
+        }
+
+        if (type === "bin") {
+          shop.bins[key].items.push({ id: uid(key), level: 1 });
+        }
+
+        if (type === "chest") {
+          shop.chests.push({ id: uid("chest"), level: 1 });
+        }
+
+        renderShopEditor();
+      });
+    });
+
+    document.querySelectorAll("[data-remove-type]").forEach(button => {
+      button.addEventListener("click", () => {
+        syncEditorLevels();
+
+        const type = button.dataset.removeType;
+        const key = button.dataset.removeKey;
+        const index = Number(button.dataset.removeIndex);
+
+        if (type === "rack") shop.racks[key].items.splice(index, 1);
+        if (type === "bin") shop.bins[key].items.splice(index, 1);
+        if (type === "chest") shop.chests.splice(index, 1);
+
+        renderShopEditor();
+      });
+    });
+
+    document.querySelectorAll("[data-level-type]").forEach(input => {
+      input.addEventListener("input", updateEditorPreview);
+    });
+
+    document.getElementById("totalSlotsInput")?.addEventListener("input", updateEditorPreview);
+  }
+
+  function updateEditorPreview() {
+    const preview = document.getElementById("shopEditorPreview");
+    const total = Math.max(
+      1,
+      Number(document.getElementById("totalSlotsInput")?.value || shop.totalSlots)
+    );
+
+    if (preview) {
+      preview.textContent = `${usedSlots()}/${total}`;
+      preview.classList.toggle("over-limit", usedSlots() > total);
+    }
+  }
+
   function openShopEditor() {
-    Object.entries(shop.racks).forEach(([key, item]) => {
-      document.getElementById(`shop_${key}_qty`).value = item.quantity;
-      document.getElementById(`shop_${key}_lvl`).value = item.level;
-    });
-
-    Object.entries(shop.bins).forEach(([key, item]) => {
-      document.getElementById(`shop_${key}_qty`).value = item.quantity;
-      document.getElementById(`shop_${key}_lvl`).value = item.level;
-    });
-
-    document.getElementById("shop_chests_qty").value = shop.chests.quantity;
-    document.getElementById("shop_chests_lvl").value = shop.chests.level;
-    document.getElementById("shop_counter_lvl").value = shop.counter.level;
-    document.getElementById("shop_total_slots").value = shop.totalSlots;
-
-    updateShopEditorPreview();
-
+    renderShopEditor();
     shopModal.classList.add("open");
     document.body.style.overflow = "hidden";
   }
@@ -859,418 +928,175 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.overflow = "";
   }
 
-  function editorNumber(id) {
-    return Math.max(0, Number(document.getElementById(id)?.value || 0));
-  }
+  document.getElementById("editShopButton")?.addEventListener("click", openShopEditor);
+  document.getElementById("closeShopEditor").addEventListener("click", closeShopEditor);
+  shopModal.querySelector(".tp-modal-overlay").addEventListener("click", closeShopEditor);
 
-  function updateShopEditorPreview() {
-    let total = 1;
+  document.getElementById("saveShopButton").addEventListener("click", () => {
+    syncEditorLevels();
 
-    Object.keys(shop.racks).forEach(key => {
-      total += editorNumber(`shop_${key}_qty`);
-    });
-
-    Object.keys(shop.bins).forEach(key => {
-      total += editorNumber(`shop_${key}_qty`);
-    });
-
-    total += editorNumber("shop_chests_qty");
-
-    const max = Math.max(1, editorNumber("shop_total_slots"));
-    const preview = document.getElementById("shopEditorPreview");
-
-    if (preview) {
-      preview.textContent = `${total}/${max}`;
-      preview.classList.toggle("over-limit", total > max);
+    if (usedSlots() > shop.totalSlots) {
+      const ok = confirm(
+        `Sua configuração usa ${usedSlots()}/${shop.totalSlots} espaços. Deseja salvar mesmo assim?`
+      );
+      if (!ok) return;
     }
-  }
 
-  const editShopButton = document.getElementById("editShopButton");
-
-  if (editShopButton) {
-    editShopButton.addEventListener("click", openShopEditor);
-  }
-
-  document
-    .getElementById("closeShopEditor")
-    .addEventListener("click", closeShopEditor);
-
-  shopModal
-    .querySelector(".tp-modal-overlay")
-    .addEventListener("click", closeShopEditor);
-
-  shopModal.querySelectorAll("input").forEach(input => {
-    input.addEventListener("input", updateShopEditorPreview);
+    saveShop();
+    updateShop();
+    closeShopEditor();
   });
 
-  document
-    .getElementById("saveShopButton")
-    .addEventListener("click", () => {
-      const newShop = clone(shop);
+  const style = document.createElement("style");
 
-      Object.keys(newShop.racks).forEach(key => {
-        newShop.racks[key].quantity = editorNumber(`shop_${key}_qty`);
-        newShop.racks[key].level = clamp(
-          editorNumber(`shop_${key}_lvl`),
-          1,
-          30
-        );
-      });
+  style.textContent = `
+    #editAccountButton{
+      width:42px;height:42px;border-radius:12px;background:#0d131b;
+      border:1px solid rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:16px
+    }
 
-      Object.keys(newShop.bins).forEach(key => {
-        newShop.bins[key].quantity = editorNumber(`shop_${key}_qty`);
-        newShop.bins[key].level = clamp(
-          editorNumber(`shop_${key}_lvl`),
-          1,
-          15
-        );
-      });
+    #accountEditor,#shopEditor{
+      position:fixed;inset:0;z-index:9999;display:none;align-items:center;
+      justify-content:center;padding:20px
+    }
 
-      newShop.chests.quantity = editorNumber("shop_chests_qty");
-      newShop.chests.level = clamp(
-        editorNumber("shop_chests_lvl"),
-        1,
-        30
-      );
+    #accountEditor.open,#shopEditor.open{display:flex}
 
-      newShop.counter.quantity = 1;
-      newShop.counter.level = clamp(
-        editorNumber("shop_counter_lvl"),
-        1,
-        30
-      );
+    .tp-modal-overlay{
+      position:absolute;inset:0;background:rgba(0,0,0,.8);
+      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+    }
 
-      newShop.totalSlots = Math.max(
-        1,
-        editorNumber("shop_total_slots")
-      );
+    .tp-modal{
+      position:relative;z-index:2;width:min(460px,100%);max-height:90vh;
+      overflow:hidden;background:linear-gradient(180deg,#121923,#090d13);
+      border:1px solid rgba(244,185,66,.3);border-radius:20px;padding:22px;
+      box-shadow:0 30px 80px rgba(0,0,0,.6)
+    }
 
-      const newUsed =
-        Object.values(newShop.racks).reduce((s, x) => s + x.quantity, 0) +
-        Object.values(newShop.bins).reduce((s, x) => s + x.quantity, 0) +
-        newShop.chests.quantity +
-        1;
+    .tp-shop-modal{width:min(900px,100%);display:flex;flex-direction:column}
 
-      if (newUsed > newShop.totalSlots) {
-        const confirmOver = confirm(
-          `Essa configuração usa ${newUsed}/${newShop.totalSlots} espaços. ` +
-          `Deseja salvar mesmo assim para corrigir depois?`
-        );
+    .tp-modal-header{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:16px;margin-bottom:20px
+    }
 
-        if (!confirmOver) return;
+    .tp-modal-header span{
+      color:#f4b942;font-size:10px;font-weight:900;letter-spacing:.15em
+    }
+
+    .tp-modal-header h2{margin-top:4px;color:#fff}
+
+    #closeAccountEditor,#closeShopEditor{
+      width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.05);
+      color:#fff;cursor:pointer
+    }
+
+    .tp-form{display:grid;gap:14px}
+
+    .tp-form label,.tp-individual-item label,.tp-edit-row label{
+      display:grid;gap:6px;color:#a7b0bf;font-size:11px;font-weight:700
+    }
+
+    .tp-form input,.tp-individual-item input,.tp-edit-row input{
+      width:100%;min-height:42px;padding:0 12px;border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);outline:none;background:#080c12;
+      color:#fff;font-size:14px
+    }
+
+    .tp-save-button{
+      min-height:48px;padding:0 18px;border-radius:12px;
+      background:linear-gradient(135deg,#ffd36a,#f4b942);
+      color:#171005;font-weight:900;cursor:pointer
+    }
+
+    .tp-shop-editor-body{overflow-y:auto;padding-right:5px}
+
+    .tp-editor-section{
+      padding:15px 0 18px;border-top:1px solid rgba(255,255,255,.07)
+    }
+
+    .tp-editor-section:first-child{border-top:0;padding-top:0}
+    .tp-editor-section h3{margin-bottom:12px;font-size:15px}
+
+    .tp-editor-group{
+      padding:12px;margin-bottom:10px;border-radius:14px;
+      background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06)
+    }
+
+    .tp-editor-group-title{
+      display:flex;align-items:center;gap:8px;margin-bottom:9px
+    }
+
+    .tp-individual-list{display:grid;gap:7px}
+
+    .tp-individual-item{
+      display:grid;grid-template-columns:50px 110px auto;align-items:end;
+      gap:10px;padding:9px;border-radius:10px;background:#0b1119
+    }
+
+    .tp-individual-item>span{
+      align-self:center;color:#ffd36a;font-weight:900
+    }
+
+    .tp-remove-item,.tp-add-item{
+      min-height:42px;border-radius:10px;cursor:pointer;font-weight:800
+    }
+
+    .tp-remove-item{
+      background:rgba(255,95,102,.08);color:#ff9297;
+      border:1px solid rgba(255,95,102,.18)
+    }
+
+    .tp-add-item{
+      width:100%;margin-top:8px;background:rgba(244,185,66,.08);
+      color:#ffd36a;border:1px dashed rgba(244,185,66,.3)
+    }
+
+    .tp-edit-row{
+      display:grid;grid-template-columns:1fr 120px;gap:12px;
+      align-items:end;padding:10px;border-radius:12px;background:rgba(255,255,255,.025)
+    }
+
+    .tp-shop-editor-footer{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding-top:15px;border-top:1px solid rgba(255,255,255,.08)
+    }
+
+    .tp-shop-editor-footer small,.tp-shop-editor-footer strong{display:block}
+    .tp-shop-editor-footer small{color:#6e7887}
+    .tp-shop-editor-footer strong{margin-top:2px;font-size:20px}
+    .tp-shop-editor-footer strong.over-limit{color:#ff5f66}
+
+    .resource-card{min-height:240px}
+
+    .resource-stats{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:7px;margin-top:11px
+    }
+
+    .resource-stats>div{
+      padding:8px;border-radius:9px;background:rgba(255,255,255,.025);
+      border:1px solid rgba(255,255,255,.055)
+    }
+
+    .resource-stats small,.resource-stats b{display:block}
+    .resource-stats small{color:#6e7887;font-size:9px}
+    .resource-stats b{margin-top:3px;color:#f4f7fb;font-size:13px}
+    .resource-source-note{margin-top:9px!important;color:#6e7887!important;font-size:9px!important}
+
+    @media(max-width:640px){
+      #accountEditor,#shopEditor{align-items:flex-end;padding:0}
+      .tp-modal{
+        width:100%;max-height:94vh;border-radius:22px 22px 0 0;
+        padding:19px 15px calc(18px + env(safe-area-inset-bottom))
       }
-
-      shop = newShop;
-      saveShop();
-      updateShopDashboardSummary();
-      closeShopEditor();
-    });
-
-  /* =======================================================
-     CSS DOS EDITORES / DADOS PROFISSIONAIS
-  ======================================================= */
-
-  const dynamicStyle = document.createElement("style");
-
-  dynamicStyle.textContent = `
-    #editAccountButton {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: #0d131b;
-      border: 1px solid rgba(255,255,255,.08);
-      color: #fff;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    #accountEditor,
-    #shopEditor {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    #accountEditor.open,
-    #shopEditor.open {
-      display: flex;
-    }
-
-    .tp-modal-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,.78);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    .tp-modal {
-      position: relative;
-      z-index: 2;
-      width: min(460px, 100%);
-      max-height: 90vh;
-      overflow: hidden;
-      background: linear-gradient(180deg, #121923, #090d13);
-      border: 1px solid rgba(244,185,66,.3);
-      border-radius: 20px;
-      padding: 22px;
-      box-shadow: 0 30px 80px rgba(0,0,0,.6);
-    }
-
-    .tp-shop-modal {
-      width: min(850px, 100%);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .tp-modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .tp-modal-header span {
-      color: #f4b942;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: .15em;
-    }
-
-    .tp-modal-header h2 {
-      margin-top: 4px;
-      color: #fff;
-    }
-
-    #closeAccountEditor,
-    #closeShopEditor {
-      width: 40px;
-      height: 40px;
-      border-radius: 11px;
-      background: rgba(255,255,255,.05);
-      color: #fff;
-      cursor: pointer;
-    }
-
-    .tp-form {
-      display: grid;
-      gap: 14px;
-    }
-
-    .tp-form label,
-    .tp-edit-row label {
-      display: grid;
-      gap: 7px;
-      color: #a7b0bf;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .tp-form input,
-    .tp-edit-row input {
-      width: 100%;
-      min-height: 44px;
-      padding: 0 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,.08);
-      outline: none;
-      background: #080c12;
-      color: white;
-      font-size: 15px;
-    }
-
-    .tp-form input:focus,
-    .tp-edit-row input:focus {
-      border-color: rgba(244,185,66,.6);
-      box-shadow: 0 0 0 3px rgba(244,185,66,.08);
-    }
-
-    .tp-save-button {
-      min-height: 50px;
-      padding: 0 18px;
-      margin-top: 5px;
-      border-radius: 12px;
-      border: 0;
-      background: linear-gradient(135deg, #ffd36a, #f4b942);
-      color: #171005;
-      font-weight: 900;
-      cursor: pointer;
-    }
-
-    .tp-shop-editor-body {
-      overflow-y: auto;
-      padding-right: 5px;
-    }
-
-    .tp-editor-section {
-      padding: 15px 0 18px;
-      border-top: 1px solid rgba(255,255,255,.07);
-    }
-
-    .tp-editor-section:first-child {
-      border-top: 0;
-      padding-top: 0;
-    }
-
-    .tp-editor-section h3 {
-      margin-bottom: 12px;
-      font-size: 15px;
-      color: #fff;
-    }
-
-    .tp-editor-help {
-      margin: -5px 0 12px;
-      color: #6e7887;
-      font-size: 11px;
-    }
-
-    .tp-edit-row {
-      display: grid;
-      grid-template-columns: minmax(150px, 1fr) 120px 120px;
-      gap: 12px;
-      align-items: end;
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 12px;
-      background: rgba(255,255,255,.025);
-      border: 1px solid rgba(255,255,255,.06);
-    }
-
-    .tp-edit-row.single {
-      grid-template-columns: minmax(150px, 1fr) 120px;
-    }
-
-    .tp-edit-name {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      align-self: center;
-    }
-
-    .tp-edit-name span {
-      font-size: 20px;
-    }
-
-    .tp-edit-name strong {
-      font-size: 13px;
-    }
-
-    .tp-shop-editor-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding-top: 15px;
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
-
-    .tp-shop-editor-footer small,
-    .tp-shop-editor-footer strong {
-      display: block;
-    }
-
-    .tp-shop-editor-footer small {
-      color: #6e7887;
-    }
-
-    .tp-shop-editor-footer strong {
-      margin-top: 2px;
-      color: #fff;
-      font-size: 20px;
-    }
-
-    .tp-shop-editor-footer strong.over-limit {
-      color: #ff5f66;
-    }
-
-    .resource-card {
-      min-height: 230px;
-    }
-
-    .resource-stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap: 7px;
-      margin-top: 11px;
-    }
-
-    .resource-stats > div {
-      padding: 8px;
-      border-radius: 9px;
-      background: rgba(255,255,255,.025);
-      border: 1px solid rgba(255,255,255,.055);
-    }
-
-    .resource-stats small,
-    .resource-stats b {
-      display: block;
-    }
-
-    .resource-stats small {
-      color: #6e7887;
-      font-size: 9px;
-    }
-
-    .resource-stats b {
-      margin-top: 3px;
-      color: #f4f7fb;
-      font-size: 13px;
-    }
-
-    .resource-source-note {
-      margin-top: 9px !important;
-      color: #6e7887 !important;
-      font-size: 9px !important;
-    }
-
-    @media(max-width:640px) {
-      #accountEditor,
-      #shopEditor {
-        align-items: flex-end;
-        padding: 0;
-      }
-
-      .tp-modal {
-        width: 100%;
-        max-height: 94vh;
-        border-radius: 22px 22px 0 0;
-        padding: 19px 15px calc(18px + env(safe-area-inset-bottom));
-      }
-
-      .tp-edit-row {
-        grid-template-columns: 1fr 88px 88px;
-        gap: 7px;
-        padding: 9px;
-      }
-
-      .tp-edit-row.single {
-        grid-template-columns: 1fr 90px;
-      }
-
-      .tp-edit-name strong {
-        font-size: 11px;
-      }
-
-      .tp-shop-editor-footer .tp-save-button {
-        min-width: 150px;
-      }
-
-      .resource-stats {
-        grid-template-columns: 1fr 1fr;
-      }
+      .tp-individual-item{grid-template-columns:42px 85px 1fr;gap:7px}
+      .tp-shop-editor-footer .tp-save-button{min-width:150px}
     }
   `;
 
-  document.head.appendChild(dynamicStyle);
-
-  /* =======================================================
-     ESC
-  ======================================================= */
+  document.head.appendChild(style);
 
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
@@ -1280,10 +1106,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  /* =======================================================
-     INICIALIZAÇÃO
-  ======================================================= */
-
   updateDashboard();
-  updateShopDashboardSummary();
 });
