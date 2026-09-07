@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.6.0
+   TITANPATH - APP.JS v0.7.0
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -1340,7 +1340,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 /* =========================================================
    TITANPATH - FABRICAÇÃO INTELIGENTE v0.3.1
-   Projetos + slots + XP/min + ouro/min + Advisor
+   Projetos desbloqueados + componentes + slots + XP/min + ouro/min + Advisor
 ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1351,6 +1351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sort: "advisor",
     filter: "all",
     resourcesUpdatedAt: null,
+    components: {},
     resources: {
       "Madeira": 0,
       "Ferro": 0,
@@ -1423,6 +1424,9 @@ document.addEventListener("DOMContentLoaded", () => {
         resources: {
           ...cloneCrafting(DEFAULT_CRAFTING.resources),
           ...(parsed.resources || {})
+        },
+        components: {
+          ...(parsed.components || {})
         }
       };
 
@@ -1511,16 +1515,51 @@ document.addEventListener("DOMContentLoaded", () => {
     return available;
   }
 
-  function canCraftWithResources(project, resources) {
-    const req = project.resources || {};
+  function projectComponentRequirements(project) {
+    const output = {};
+    (Array.isArray(project?.components) ? project.components : []).forEach(component => {
+      const name = String(component?.name || "").trim();
+      const amount = Math.max(0, Number(component?.amount || 0));
+      if (name && amount > 0) output[name] = Number(output[name] || 0) + amount;
+    });
+    return output;
+  }
 
-    return Object.entries(req).every(([resource, amount]) => {
+  function queuedReservedComponents() {
+    const reserved = {};
+    crafting.queue.forEach(projectId => {
+      if (!projectId) return;
+      const project = projectById(projectId);
+      if (!project) return;
+      Object.entries(projectComponentRequirements(project)).forEach(([name, amount]) => {
+        reserved[name] = Number(reserved[name] || 0) + Number(amount || 0);
+      });
+    });
+    return reserved;
+  }
+
+  function effectiveComponents() {
+    const reserved = queuedReservedComponents();
+    const available = {};
+    Object.entries(crafting.components || {}).forEach(([name, amount]) => {
+      available[name] = Math.max(0, Number(amount || 0) - Number(reserved[name] || 0));
+    });
+    return available;
+  }
+
+  function canCraftWithResources(project, resources, components = effectiveComponents()) {
+    const req = project.resources || {};
+    const resourcesOk = Object.entries(req).every(([resource, amount]) => {
       return Number(resources[resource] || 0) >= Number(amount || 0);
+    });
+    if (!resourcesOk) return false;
+    return Object.entries(projectComponentRequirements(project)).every(([name, amount]) => {
+      return Number(components[name] || 0) >= Number(amount || 0);
     });
   }
 
   function canCraft(project) {
-    return canCraftWithResources(project, effectiveResources());
+    return canCraftWithResources(project, effectiveResources(), effectiveComponents());
   }
 
   function normalize(value, min, max) {
@@ -2000,10 +2039,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const req = project.resources || {};
 
     Object.entries(req).forEach(([resource, amount]) => {
-      crafting.resources[resource] = Math.max(
-        0,
-        Number(crafting.resources[resource] || 0) - Number(amount || 0)
-      );
+      crafting.resources[resource] = Math.max(0, Number(crafting.resources[resource] || 0) - Number(amount || 0));
+    });
+
+    Object.entries(projectComponentRequirements(project)).forEach(([name, amount]) => {
+      crafting.components[name] = Math.max(0, Number(crafting.components[name] || 0) - Number(amount || 0));
     });
   }
 
@@ -2201,8 +2241,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const components = Array.isArray(project.components) ? project.components : [];
 
+    const availableComponents = effectiveComponents();
     const componentPart = components.length
-      ? ` | Componentes: ${components.map(c => `${escapeHtml(c.name)} ×${fmt(c.amount)}`).join(" • ")}`
+      ? ` | Componentes: ${components.map(c => {
+          const have = Number(availableComponents[c.name] || 0);
+          const need = Number(c.amount || 0);
+          return `${escapeHtml(c.name)} ${fmt(have)}/${fmt(need)}${have >= need ? " ✓" : " ⚠"}`;
+        }).join(" • ")}`
       : "";
 
     return resourcePart + componentPart;
@@ -2525,6 +2570,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <div class="tp-resource-edit-grid" id="craftingResourceInputs"></div>
         </section>
+
+        <section class="tp-editor-section">
+          <h3>🧩 Componentes disponíveis</h3>
+          <p class="tp-editor-help">
+            O TitanPath monta esta lista automaticamente usando os componentes exigidos pelos seus projetos desbloqueados. Informe apenas quantos você possui.
+          </p>
+          <div class="tp-resource-edit-grid" id="craftingComponentInputs"></div>
+        </section>
       </div>
 
       <button id="saveCraftingConfig" class="tp-save-button">
@@ -2563,9 +2616,30 @@ document.addEventListener("DOMContentLoaded", () => {
     `).join("");
   }
 
+  function renderCraftingComponentInputs() {
+    const container = document.getElementById("craftingComponentInputs");
+    if (!container) return;
+    const names = [...new Set([
+      ...Object.keys(crafting.components || {}),
+      ...crafting.projects.flatMap(project => (project.components || []).map(component => component.name).filter(Boolean))
+    ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    if (!names.length) {
+      container.innerHTML = `<div class="tp-editor-help">Nenhum dos seus projetos desbloqueados exige componentes no momento.</div>`;
+      return;
+    }
+
+    container.innerHTML = names.map(name => `
+      <label>${escapeHtml(name)}
+        <input type="number" min="0" value="${Number(crafting.components?.[name] || 0)}" data-crafting-component="${escapeHtml(name)}">
+      </label>
+    `).join("");
+  }
+
   function openCraftingEditor() {
     document.getElementById("editCraftingSlots").value = crafting.totalSlots;
     renderCraftingResourceInputs();
+    renderCraftingComponentInputs();
 
     craftingModal.classList.add("open");
     document.body.style.overflow = "hidden";
@@ -2595,6 +2669,11 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll("[data-crafting-resource]").forEach(input => {
         const name = input.dataset.craftingResource;
         crafting.resources[name] = Math.max(0, Number(input.value || 0));
+      });
+
+      document.querySelectorAll("[data-crafting-component]").forEach(input => {
+        const name = input.dataset.craftingComponent;
+        crafting.components[name] = Math.max(0, Number(input.value || 0));
       });
 
       crafting.resourcesUpdatedAt = Date.now();
@@ -2820,7 +2899,8 @@ document.addEventListener("DOMContentLoaded", () => {
         components: selectedCatalogBlueprint?.components || projectById(id)?.components || [],
         workers: selectedCatalogBlueprint?.workers || projectById(id)?.workers || [],
         energy: selectedCatalogBlueprint?.energy || projectById(id)?.energy || {},
-        sourceUrl: selectedCatalogBlueprint?.sourceUrl || projectById(id)?.sourceUrl || ""
+        sourceUrl: selectedCatalogBlueprint?.sourceUrl || projectById(id)?.sourceUrl || "",
+        unlocked: true
       };
 
       const existingIndex = crafting.projects.findIndex(p => p.id === data.id);
@@ -2921,8 +3001,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     matches = matches.slice(0, 30);
 
+    const unlockedCount = crafting.projects.filter(project => project.catalogId).length;
     meta.textContent = blueprintCatalog.length
-      ? `${blueprintCatalog.length} projetos carregados • ${matches.length} resultado(s) exibidos`
+      ? `${blueprintCatalog.length} projetos carregados • ${unlockedCount} desbloqueados • ${matches.length} resultado(s) exibidos`
       : "Catálogo não carregado. Verifique data/blueprints-pt.json.";
 
     if (!matches.length) {
@@ -2936,6 +3017,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     results.innerHTML = matches.map(item => {
+      const alreadyUnlocked = crafting.projects.some(project => project.catalogId === item.id);
       const resources = (item.resources || [])
         .map(r => `${escapeHtml(r.name)} ${fmt(r.amount)}`)
         .join(" • ");
@@ -2955,7 +3037,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </span>
             <small>${resources || "Recursos não informados"}</small>
           </div>
-          <span class="tp-catalog-arrow">→</span>
+          <span class="tp-catalog-arrow">${alreadyUnlocked ? "✓" : "+"}</span>
         </button>
       `;
     }).join("");
@@ -2968,8 +3050,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!blueprint) return;
 
+        const existing = crafting.projects.find(project => project.catalogId === blueprint.id);
         closeCatalogSearch();
-        openProjectEditor(null, blueprint);
+        if (existing) {
+          openProjectEditor(existing.id);
+        } else {
+          openProjectEditor(null, blueprint);
+        }
       });
     });
   }
