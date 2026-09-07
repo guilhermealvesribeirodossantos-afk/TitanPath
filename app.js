@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.7.0
+   TITANPATH - APP.JS v0.7.1
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -2938,7 +2938,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <input
           type="search"
           id="catalogSearchInput"
-          placeholder="Digite o nome do item em português..."
+          placeholder="Ex.: sandália tier 2, espada tier 5, Squire Sword..."
           autocomplete="off"
         >
       </div>
@@ -2978,25 +2978,142 @@ document.addEventListener("DOMContentLoaded", () => {
       .trim();
   }
 
+  function catalogSearchProfile(query) {
+    const normalized = normalizeSearch(query);
+
+    const tierMatch = normalized.match(/\b(?:tier|t)\s*(\d{1,2})\b/);
+    const tier = tierMatch ? Number(tierMatch[1]) : null;
+
+    let text = normalized
+      .replace(/\b(?:tier|t)\s*\d{1,2}\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const synonymGroups = [
+      {
+        triggers: ["sandalia", "sandalias", "sandal", "sandals"],
+        aliases: [
+          "sandalia", "sandalias", "sandal", "sandals",
+          "flip flop", "flip flops", "flip-flop", "flip-flops",
+          "chinelo", "chinelos",
+          "calcado leve", "light footwear"
+        ]
+      },
+      {
+        triggers: ["bota", "botas", "boot", "boots"],
+        aliases: ["bota", "botas", "boot", "boots", "calcado leve", "light footwear"]
+      },
+      {
+        triggers: ["sapato", "sapatos", "shoe", "shoes"],
+        aliases: ["sapato", "sapatos", "shoe", "shoes", "calcado leve", "light footwear"]
+      }
+    ];
+
+    const expanded = new Set(text ? text.split(/\s+/).filter(Boolean) : []);
+
+    synonymGroups.forEach(group => {
+      const triggered = group.triggers.some(trigger =>
+        text.includes(normalizeSearch(trigger))
+      );
+
+      if (triggered) {
+        group.aliases.forEach(alias => expanded.add(normalizeSearch(alias)));
+      }
+    });
+
+    return {
+      normalized,
+      tier,
+      text,
+      tokens: [...expanded]
+    };
+  }
+
+  function catalogItemSearchText(item) {
+    const aliases = Array.isArray(item.searchAliases)
+      ? item.searchAliases.join(" ")
+      : "";
+
+    return normalizeSearch(
+      `${item.namePt || ""} ` +
+      `${item.nameOriginal || ""} ` +
+      `${aliases} ` +
+      `${item.categoryPt || ""} ` +
+      `${item.categoryOriginal || ""} ` +
+      `${item.id || ""} ` +
+      `tier ${item.tier || ""}`
+    );
+  }
+
   function renderCatalogResults(query) {
     const results = document.getElementById("catalogResults");
     const meta = document.getElementById("catalogMeta");
     if (!results || !meta) return;
 
-    const normalized = normalizeSearch(query);
+    const profile = catalogSearchProfile(query);
 
     let matches = blueprintCatalog.filter(item => {
-      if (!normalized) return true;
+      if (!profile.normalized) return true;
 
-      const aliases = Array.isArray(item.searchAliases)
-        ? item.searchAliases.join(" ")
-        : "";
+      if (profile.tier !== null && Number(item.tier) !== profile.tier) {
+        return false;
+      }
 
-      const haystack = normalizeSearch(
-        `${item.namePt || ""} ${item.nameOriginal || ""} ${aliases} ${item.categoryPt || ""} ${item.id || ""}`
-      );
+      if (!profile.text) return true;
 
-      return haystack.includes(normalized);
+      const haystack = catalogItemSearchText(item);
+
+      // Busca flexível: cada palavra digitada deve ser reconhecida,
+      // considerando sinônimos PT-BR/EN e nomes alternativos.
+      const rawTokens = profile.text.split(/\s+/).filter(Boolean);
+
+      return rawTokens.every(token => {
+        if (haystack.includes(token)) return true;
+
+        if (["sandalia", "sandalias", "sandal", "sandals"].includes(token)) {
+          return [
+            "sandal", "sandals",
+            "flip flop", "flip-flops",
+            "chinelo", "chinelos",
+            "calcado leve", "light footwear"
+          ].some(alias => haystack.includes(normalizeSearch(alias)));
+        }
+
+        if (["sapato", "sapatos", "shoe", "shoes"].includes(token)) {
+          return ["sapato", "sapatos", "shoe", "shoes", "calcado leve", "light footwear"]
+            .some(alias => haystack.includes(normalizeSearch(alias)));
+        }
+
+        if (["bota", "botas", "boot", "boots"].includes(token)) {
+          return ["bota", "botas", "boot", "boots", "calcado leve", "light footwear"]
+            .some(alias => haystack.includes(normalizeSearch(alias)));
+        }
+
+        return false;
+      });
+    });
+
+    // Relevância: nome exato/semelhante primeiro; tier já foi filtrado acima.
+    matches.sort((a, b) => {
+      const aText = catalogItemSearchText(a);
+      const bText = catalogItemSearchText(b);
+
+      const aName = normalizeSearch(`${a.namePt || ""} ${a.nameOriginal || ""}`);
+      const bName = normalizeSearch(`${b.namePt || ""} ${b.nameOriginal || ""}`);
+
+      const q = profile.text;
+
+      const aScore =
+        (q && aName.includes(q) ? 100 : 0) +
+        (q && aText.includes(q) ? 30 : 0) -
+        Number(a.tier || 0) * 0.001;
+
+      const bScore =
+        (q && bName.includes(q) ? 100 : 0) +
+        (q && bText.includes(q) ? 30 : 0) -
+        Number(b.tier || 0) * 0.001;
+
+      return bScore - aScore;
     });
 
     matches = matches.slice(0, 30);
@@ -3010,7 +3127,7 @@ document.addEventListener("DOMContentLoaded", () => {
       results.innerHTML = `
         <div class="tp-catalog-empty">
           <strong>Nenhum projeto encontrado</strong>
-          <small>Tente outro nome ou use o cadastro manual.</small>
+          <small>Você pode pesquisar por nome, categoria e tier. Ex.: “sandália tier 2”.</small>
         </div>
       `;
       return;
