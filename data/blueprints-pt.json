@@ -1,7 +1,7 @@
 {
-  "schemaVersion": "0.3.2",
+  "schemaVersion": "0.3.3",
   "locale": "pt-BR",
-  "catalogStatus": "partial_verified_seed",
+  "catalogStatus": "expanded_verified_seed",
   "source": {
     "officialSpreadsheet": "https://playshoptitans.com/spreadsheet",
     "spreadsheetClientVersion": "v26.8.1",
@@ -26,7 +26,7 @@
       "id": "shoprbow",
       "namePt": "Arco de Titã",
       "categoryPt": "Arco",
-      "tier": null,
+      "tier": 14,
       "value": 11500000,
       "craftTimeMinutes": 3190,
       "merchantXp": 305000,
@@ -292,6 +292,318 @@
         "speedUp": null
       },
       "sourceUrl": "https://playshoptitans.com/pt/blueprints/accessories/xc/t16cloak"
+    },
+    {
+      "id": "rapier",
+      "namePt": "Espada",
+      "categoryPt": "Espada",
+      "tier": 5,
+      "value": 5900,
+      "craftTimeMinutes": 16.5,
+      "merchantXp": 7300,
+      "workerXp": 110,
+      "resources": [
+        {
+          "name": "Ferro",
+          "amount": 41
+        },
+        {
+          "name": "Aço",
+          "amount": 8
+        }
+      ],
+      "components": [
+        {
+          "name": "Escamas de wyrms da ferrugem",
+          "amount": 2
+        },
+        {
+          "name": "Pinha de ferro",
+          "amount": 3
+        }
+      ],
+      "workers": [
+        {
+          "name": "Ferreiro",
+          "level": 9
+        }
+      ],
+      "energy": {
+        "surcharge": 130,
+        "discount": 60,
+        "suggest": 25,
+        "speedUp": 260
+      },
+      "sourceUrl": "https://playshoptitans.com/blueprints/weapons/ws/rapier"
+    },
+    {
+      "id": "arcadesword",
+      "namePt": "Lâmina de Matéria",
+      "categoryPt": "Espada",
+      "tier": 14,
+      "value": 11500000,
+      "craftTimeMinutes": 3040,
+      "merchantXp": 275000,
+      "workerXp": 4125,
+      "resources": [
+        {
+          "name": "Ferro",
+          "amount": 462
+        },
+        {
+          "name": "Aço",
+          "amount": 155
+        },
+        {
+          "name": "Essência",
+          "amount": 8
+        }
+      ],
+      "components": [
+        {
+          "name": "Faísca Divina",
+          "amount": 4
+        },
+        {
+          "name": "Pérola das profundezas",
+          "amount": 10
+        }
+      ],
+      "workers": [
+        {
+          "name": "Ferreiro",
+          "level": 36
+        },
+        {
+          "name": "Mestre",
+          "level": 32
+        },
+        {
+          "name": "Joalheiro",
+          "level": 29
+        }
+      ],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/ws/arcadesword"
+    },
+    {
+      "id": "sultandagger",
+      "namePt": "Adaga do sultão",
+      "categoryPt": "Adaga",
+      "tier": 9,
+      "value": 410000,
+      "craftTimeMinutes": 360,
+      "merchantXp": 39000,
+      "workerXp": 585,
+      "resources": [
+        {
+          "name": "Ferro",
+          "amount": 247
+        },
+        {
+          "name": "Aço",
+          "amount": 69
+        },
+        {
+          "name": "Joias",
+          "amount": 15
+        }
+      ],
+      "components": [
+        {
+          "name": "Flâmula medonha",
+          "amount": 5
+        }
+      ],
+      "workers": [
+        {
+          "name": "Ferreiro",
+          "level": 24
+        },
+        {
+          "name": "Joalheiro",
+          "level": 20
+        }
+      ],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/wd/sultandagger"
+    },
+    {
+      "id": "heartseeker",
+      "namePt": "Caça-corações",
+      "categoryPt": "Adaga",
+      "tier": 11,
+      "value": 1200000,
+      "craftTimeMinutes": 600,
+      "merchantXp": 77500,
+      "workerXp": 1163,
+      "resources": [
+        {
+          "name": "Ferro",
+          "amount": 304
+        },
+        {
+          "name": "Aço",
+          "amount": 88
+        }
+      ],
+      "components": [
+        {
+          "name": "Selo da Graça",
+          "amount": 1
+        },
+        {
+          "name": "Garra Cruel",
+          "amount": 4
+        }
+      ],
+      "workers": [
+        {
+          "name": "Ferreiro",
+          "level": 27
+        },
+        {
+          "name": "Joalheiro",
+          "level": 23
+        },
+        {
+          "name": "Mestre",
+          "level": 20
+        }
+      ],
+      "energy": {
+        "surcharge": 2155,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/wd/heartseeker"
+    },
+    {
+      "id": "woodaxe",
+      "namePt": "Machado de madeira",
+      "categoryPt": "Machado",
+      "tier": 1,
+      "value": 310,
+      "craftTimeMinutes": 1.1666666666666667,
+      "merchantXp": null,
+      "workerXp": null,
+      "resources": [
+        {
+          "name": "Madeira",
+          "amount": 9
+        }
+      ],
+      "components": [
+        {
+          "name": "Madeira élfica",
+          "amount": 1
+        }
+      ],
+      "workers": [],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/wa"
+    },
+    {
+      "id": "hatchet",
+      "namePt": "Machadinha",
+      "categoryPt": "Machado",
+      "tier": 2,
+      "value": 710,
+      "craftTimeMinutes": 2.6666666666666665,
+      "merchantXp": null,
+      "workerXp": null,
+      "resources": [
+        {
+          "name": "Madeira",
+          "amount": 14
+        }
+      ],
+      "components": [
+        {
+          "name": "Madeira élfica",
+          "amount": 2
+        }
+      ],
+      "workers": [],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/wa"
+    },
+    {
+      "id": "sturdycane",
+      "namePt": "Bastão robusto",
+      "categoryPt": "Cajado",
+      "tier": 1,
+      "value": 200,
+      "craftTimeMinutes": 1.1666666666666667,
+      "merchantXp": null,
+      "workerXp": null,
+      "resources": [
+        {
+          "name": "Madeira",
+          "amount": 9
+        }
+      ],
+      "components": [],
+      "workers": [],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/wt"
+    },
+    {
+      "id": "oakstaff",
+      "namePt": "Cajado de carvalho",
+      "categoryPt": "Cajado",
+      "tier": 2,
+      "value": 710,
+      "craftTimeMinutes": 2.6666666666666665,
+      "merchantXp": null,
+      "workerXp": null,
+      "resources": [
+        {
+          "name": "Madeira",
+          "amount": 14
+        }
+      ],
+      "components": [
+        {
+          "name": "Madeira élfica",
+          "amount": 2
+        }
+      ],
+      "workers": [],
+      "energy": {
+        "surcharge": null,
+        "discount": null,
+        "suggest": null,
+        "speedUp": null
+      },
+      "sourceUrl": "https://playshoptitans.com/pt/blueprints/weapons/wt"
     }
-  ]
+  ],
+  "notes": "Catálogo expandido apenas com dados verificáveis nas páginas oficiais consultadas; campos não confirmados permanecem null em vez de serem estimados."
 }
