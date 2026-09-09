@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.8.0
+   TITANPATH - APP.JS v0.8.1
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -4120,6 +4120,29 @@ document.addEventListener("DOMContentLoaded", () => {
   `;
   document.head.appendChild(salesStyle);
 
+  // Garante a montagem do módulo de Vendas mesmo antes de qualquer
+  // atualização posterior da Fabricação. O bloco já existe no index.html
+  // com a classe .crafting-sales-link, então substituímos o placeholder
+  // imediatamente quando o app termina de inicializar.
+  const ensureSalesPanelRendered = () => {
+    const host = document.querySelector(".crafting-sales-link");
+    if (!host) return;
+    renderSalesAdvisor();
+  };
+
+  requestAnimationFrame(ensureSalesPanelRendered);
+  setTimeout(ensureSalesPanelRendered, 150);
+  setTimeout(ensureSalesPanelRendered, 800);
+
+  // Ao voltar para Fabricação pelo menu, renderiza novamente para refletir
+  // estoque, energia e histórico atualizados.
+  document.querySelectorAll('[data-page="crafting"], [data-go="crafting"]')
+    .forEach(button => {
+      button.addEventListener("click", () => {
+        setTimeout(ensureSalesPanelRendered, 0);
+      });
+    });
+
   document.head.appendChild(craftingStyle);
 
   document.addEventListener("keydown", event => {
@@ -4135,6 +4158,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadBlueprintCatalog().finally(() => {
     updateCraftingUI();
+    ensureSalesPanelRendered();
   });
 });
 
