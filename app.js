@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.8.1
+   TITANPATH - APP.JS v0.8.2
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -356,6 +356,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveAccount() {
     localStorage.setItem("titanpath_account", JSON.stringify(account));
   }
+
+  document.addEventListener("titanpath:accountchanged", () => {
+    account = loadAccount();
+    updateDashboard();
+  });
 
   function saveShop() {
     localStorage.setItem("titanpath_shop", JSON.stringify(shop));
@@ -2059,6 +2064,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const salesState = loadSalesState();
 
+  function readSalesAccount() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem("titanpath_account") || "null");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeSalesAccount(next) {
+    localStorage.setItem("titanpath_account", JSON.stringify(next || {}));
+    document.dispatchEvent(new CustomEvent("titanpath:accountchanged"));
+  }
+
+  function currentSalesEnergy() {
+    return Math.max(0, Number(readSalesAccount().energy || 0));
+  }
+
   function saveSalesState() {
     localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(salesState));
   }
@@ -2104,7 +2127,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bestSurchargeCandidate(projects) {
-    const currentEnergy = Number(account.energy || 0);
+    const currentEnergy = currentSalesEnergy();
 
     return projects
       .filter(project => project.saleEnergy.surcharge > 0)
@@ -2180,7 +2203,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderSalesAdvisor() {
-    const host = document.querySelector(".crafting-sales-link");
+    const host = document.getElementById("salesIntelligencePanel") || document.querySelector(".crafting-sales-link");
     if (!host) return;
 
     const recommendation = salesRecommendation();
@@ -2197,7 +2220,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="tp-sales-energy">
           <span>⚡ Energia atual</span>
-          <strong>${fmt(account.energy || 0)}</strong>
+          <strong>${fmt(currentSalesEnergy())}</strong>
         </div>
       </div>
 
@@ -2211,7 +2234,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="tp-sales-grid">
           ${stock.map(project => {
             const e = project.saleEnergy;
-            const canSurcharge = e.surcharge > 0 && Number(account.energy || 0) >= e.surcharge;
+            const canSurcharge = e.surcharge > 0 && currentSalesEnergy() >= e.surcharge;
             return `
               <article class="tp-sale-card">
                 <div class="tp-sale-card-top">
@@ -2271,15 +2294,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!project || Number(project.stock || 0) <= 0) return;
 
         const energyDelta = saleEnergyDelta(project, mode);
-        if (mode === "surcharge" && Number(account.energy || 0) < Math.abs(energyDelta)) {
+        if (mode === "surcharge" && currentSalesEnergy() < Math.abs(energyDelta)) {
           alert("Você não possui energia suficiente para usar Sobretaxa neste item.");
           return;
         }
 
         const gold = saleValue(project, mode);
         project.stock = Math.max(0, Number(project.stock || 0) - 1);
-        account.gold = Math.max(0, Number(account.gold || 0) + gold);
-        account.energy = Math.max(0, Number(account.energy || 0) + energyDelta);
+
+        const accountSnapshot = readSalesAccount();
+        accountSnapshot.gold = Math.max(0, Number(accountSnapshot.gold || 0) + gold);
+        accountSnapshot.energy = Math.max(0, Number(accountSnapshot.energy || 0) + energyDelta);
 
         salesState.history.unshift({
           id: `sale-${Date.now()}`,
@@ -2293,9 +2318,8 @@ document.addEventListener("DOMContentLoaded", () => {
         salesState.history = salesState.history.slice(0, 50);
 
         saveCrafting();
-        saveAccount();
+        writeSalesAccount(accountSnapshot);
         saveSalesState();
-        updateDashboard();
         updateCraftingUI();
       });
     });
@@ -4125,7 +4149,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // com a classe .crafting-sales-link, então substituímos o placeholder
   // imediatamente quando o app termina de inicializar.
   const ensureSalesPanelRendered = () => {
-    const host = document.querySelector(".crafting-sales-link");
+    const host = document.getElementById("salesIntelligencePanel") || document.querySelector(".crafting-sales-link");
     if (!host) return;
     renderSalesAdvisor();
   };
