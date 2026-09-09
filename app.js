@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.9.0
+   TITANPATH - APP.JS v1.0.0
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -2375,20 +2375,8 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    const discount = bestDiscountCandidate(projects);
-    if (discount) {
-      return {
-        mode: 'discount',
-        title: `Acumule energia com ${discount.project.name}`,
-        text: `Nenhuma Sobretaxa lucrativa está acessível agora. Este item entrega a melhor energia por ouro sacrificado entre o estoque atual.`,
-        actionProject: discount.project,
-        actionMode: 'discount',
-        projectedGold: saleValue(discount.project, 'discount'),
-        projectedEnergy: energy + discount.energyGain,
-        history
-      };
-    }
-
+    // PRO COACH: não sacrifica ouro em Desconto sem enxergar um ciclo
+    // completo e lucrativo com o estoque disponível.
     const normal = [...projects].sort((a, b) => Number(b.baseValue || 0) - Number(a.baseValue || 0))[0];
     return {
       mode: 'normal',
@@ -2596,6 +2584,183 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
+  function proCoachNavigate(page) {
+    const button =
+      document.querySelector(`.nav-item[data-page="${page}"]`) ||
+      document.querySelector(`.mobile-nav-item[data-page="${page}"]`);
+    if (button) button.click();
+  }
+
+  function proCoachActionLabel(action) {
+    const labels = {
+      craft: "FABRICAR AGORA",
+      finish: "CONCLUIR FABRICAÇÃO",
+      discount: "FAZER DESCONTO",
+      surcharge: "FAZER SOBRETAXA",
+      normal: "VENDER NORMAL",
+      resources: "ATUALIZAR RECURSOS",
+      setup: "CONFIGURAR CONTA"
+    };
+    return labels[action] || "VER AÇÃO";
+  }
+
+  function buildProCoachSteps() {
+    const steps = [];
+    const ranked = getRankedProjects();
+    const plan = buildSmartSlotPlan();
+    const busy = busyCraftingSlots();
+    const free = freeCraftingSlots();
+    const stock = totalStock();
+    const economic = economicAdvisorPlan();
+
+    // 1) Não deixar slots parados é a prioridade operacional.
+    if (free > 0 && plan.plan.length) {
+      const counts = {};
+      plan.plan.forEach(({ project }) => {
+        counts[project.name] = (counts[project.name] || 0) + 1;
+      });
+      const summary = Object.entries(counts)
+        .map(([name, count]) => `${count}× ${name}`)
+        .join(" + ");
+
+      steps.push({
+        icon: "🔨",
+        action: "craft",
+        title: `Fabrique ${summary}`,
+        text: `Preencha ${plan.plan.length} slot${plan.plan.length === 1 ? "" : "s"} livre${plan.plan.length === 1 ? "" : "s"} com o melhor plano calculado para ${strategyLabel().toLowerCase()}.`,
+        page: "crafting"
+      });
+    } else if (free > 0 && ranked.length) {
+      const diagnosis = smartGrowthDiagnosis();
+      steps.push({
+        icon: "📦",
+        action: "resources",
+        title: diagnosis.title,
+        text: diagnosis.text,
+        page: "crafting"
+      });
+    } else if (!ranked.length) {
+      steps.push({
+        icon: "⚙️",
+        action: "setup",
+        title: "Cadastre seus projetos desbloqueados",
+        text: "O Coach precisa saber o que sua conta realmente fabrica antes de montar a rota.",
+        page: "crafting"
+      });
+    }
+
+    // 2) Se já existe produção em andamento, mostrar claramente o próximo evento.
+    if (busy > 0) {
+      const firstBusy = crafting.queue
+        .map((id, index) => id ? { index, project: projectById(id) } : null)
+        .find(Boolean);
+      if (firstBusy?.project) {
+        steps.push({
+          icon: "✓",
+          action: "finish",
+          title: `Depois, conclua ${firstBusy.project.name}`,
+          text: `${busy} slot${busy === 1 ? "" : "s"} trabalhando. Ao concluir, o estoque e o Coach serão recalculados.`,
+          page: "crafting"
+        });
+      }
+    }
+
+    // 3) Venda somente quando a decisão econômica completa fizer sentido.
+    if (stock > 0 && economic?.actionProject) {
+      const mode = economic.actionMode || "normal";
+      steps.push({
+        icon: mode === "surcharge" ? "⚡" : mode === "discount" ? "🔋" : "💰",
+        action: mode,
+        title: economic.title,
+        text: economic.text,
+        page: "crafting"
+      });
+    }
+
+    // Se não há produção nem estoque, orientar a correção do gargalo.
+    if (!steps.length) {
+      const diagnosis = smartGrowthDiagnosis();
+      steps.push({
+        icon: "🧠",
+        action: ranked.length ? "resources" : "setup",
+        title: diagnosis.title,
+        text: diagnosis.text,
+        page: "crafting"
+      });
+    }
+
+    return steps.slice(0, 3);
+  }
+
+  function renderProCoach() {
+    const host = document.getElementById("proCoachPanel");
+    if (!host) return;
+
+    const steps = buildProCoachSteps();
+    const main = steps[0];
+    const account = readSalesAccount();
+    const energy = currentSalesEnergy();
+    const gold = Number(account.gold || 0);
+
+    host.innerHTML = `
+      <div class="tp-pro-coach-head">
+        <div>
+          <span>🧠 TITANPATH PRO COACH</span>
+          <h2>Faça isso agora</h2>
+          <p>Eu analiso os números. Você só executa a próxima jogada.</p>
+        </div>
+        <div class="tp-pro-coach-state">
+          <small>ESTADO ATUAL</small>
+          <strong>${fmt(gold)} 🪙 • ${fmt(energy)} ⚡</strong>
+          <span>${busyCraftingSlots()}/${crafting.totalSlots} slots • ${fmt(totalStock())} itens em estoque</span>
+        </div>
+      </div>
+
+      <article class="tp-pro-main-action">
+        <div class="tp-pro-main-icon">${main.icon}</div>
+        <div class="tp-pro-main-copy">
+          <span>🎯 PRÓXIMA JOGADA</span>
+          <h3>${escapeHtml(main.title)}</h3>
+          <p>${escapeHtml(main.text)}</p>
+        </div>
+        <button class="tp-pro-go" data-pro-page="${main.page}">
+          ${proCoachActionLabel(main.action)} →
+        </button>
+      </article>
+
+      ${steps.length > 1 ? `
+        <div class="tp-pro-next">
+          <span>DEPOIS</span>
+          ${steps.slice(1).map((step, index) => `
+            <button data-pro-page="${step.page}">
+              <b>${index + 2}</b>
+              <div>
+                <strong>${escapeHtml(step.title)}</strong>
+                <small>${escapeHtml(step.text)}</small>
+              </div>
+              <i>→</i>
+            </button>
+          `).join("")}
+        </div>
+      ` : ""}
+
+      <details class="tp-pro-details">
+        <summary>Ver por que o Coach escolheu isso</summary>
+        <p>
+          A prioridade atual combina slots livres, projetos fabricáveis, recursos,
+          componentes, estoque, energia e o resultado econômico das vendas.
+          Desconto só é recomendado quando existe um ciclo completo lucrativo
+          com o estoque disponível.
+        </p>
+      </details>
+    `;
+
+    host.querySelectorAll("[data-pro-page]").forEach(button => {
+      button.addEventListener("click", () => proCoachNavigate(button.dataset.proPage));
+    });
+  }
+
   function updateCraftingUI() {
     syncQueueLength();
 
@@ -2622,6 +2787,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCraftingAdvisor();
     renderSmartResourceStatus();
     renderSalesAdvisor();
+    renderProCoach();
   }
 
   function renderCraftingSlots() {
@@ -4651,5 +4817,66 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   `;
 
+  document.head.appendChild(style);
+})();
+
+/* =========================================================
+   TITANPATH PRO COACH v1.0.0
+========================================================= */
+(() => {
+  const style = document.createElement("style");
+  style.id = "titanpath-pro-coach-v100";
+  style.textContent = `
+    .tp-pro-coach{
+      margin:18px 0 20px;
+      padding:18px;
+      border:1px solid rgba(244,185,66,.20);
+      background:
+        radial-gradient(circle at 90% 0%,rgba(244,185,66,.10),transparent 35%),
+        linear-gradient(145deg,rgba(22,24,29,.98),rgba(11,13,17,.98));
+    }
+    .tp-pro-coach-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+    .tp-pro-coach-head span{font-size:10px;font-weight:900;letter-spacing:1.2px;color:#ffd36a}
+    .tp-pro-coach-head h2{margin:5px 0 0;font-size:24px;color:#fff}
+    .tp-pro-coach-head p{margin:5px 0 0;color:#8f9bad}
+    .tp-pro-coach-state{text-align:right;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.22)}
+    .tp-pro-coach-state small,.tp-pro-coach-state strong,.tp-pro-coach-state span{display:block}
+    .tp-pro-coach-state small{font-size:9px;color:#778294}
+    .tp-pro-coach-state strong{margin-top:4px;color:#fff}
+    .tp-pro-coach-state span{margin-top:3px;font-size:10px;color:#8f9bad}
+    .tp-pro-main-action{
+      display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;
+      margin-top:16px;padding:16px;border-radius:14px;border:1px solid rgba(35,209,139,.18);
+      background:rgba(35,209,139,.055)
+    }
+    .tp-pro-main-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:rgba(35,209,139,.10);font-size:24px}
+    .tp-pro-main-copy span{font-size:9px;font-weight:900;letter-spacing:1px;color:#7fe8bb}
+    .tp-pro-main-copy h3{margin:4px 0 0;color:#fff;font-size:19px}
+    .tp-pro-main-copy p{margin:5px 0 0;color:#9aa6b7;line-height:1.45}
+    .tp-pro-go{min-height:44px;padding:0 15px;border:0;border-radius:11px;background:#f4b942;color:#15120b;font-weight:950;cursor:pointer}
+    .tp-pro-next{margin-top:13px}
+    .tp-pro-next>span{display:block;margin-bottom:7px;font-size:9px;font-weight:900;letter-spacing:1px;color:#778294}
+    .tp-pro-next button{
+      width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;
+      padding:10px 12px;margin-top:7px;text-align:left;border-radius:11px;
+      border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.025);color:#fff;cursor:pointer
+    }
+    .tp-pro-next b{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;background:rgba(244,185,66,.08);color:#ffd36a}
+    .tp-pro-next strong,.tp-pro-next small{display:block}
+    .tp-pro-next small{margin-top:3px;color:#7f8b9c;line-height:1.35}
+    .tp-pro-next i{font-style:normal;color:#ffd36a}
+    .tp-pro-details{margin-top:12px;color:#8995a6;font-size:11px}
+    .tp-pro-details summary{cursor:pointer;color:#aeb8c6;font-weight:800}
+    .tp-pro-details p{line-height:1.5}
+    @media(max-width:700px){
+      .tp-pro-coach{margin-top:10px;padding:13px}
+      .tp-pro-coach-head{display:block}
+      .tp-pro-coach-state{margin-top:10px;text-align:left}
+      .tp-pro-main-action{grid-template-columns:42px minmax(0,1fr);padding:13px}
+      .tp-pro-main-icon{width:42px;height:42px}
+      .tp-pro-main-copy h3{font-size:17px}
+      .tp-pro-go{grid-column:1/-1;width:100%;margin-top:2px}
+    }
+  `;
   document.head.appendChild(style);
 })();
