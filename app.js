@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.8.2
+   TITANPATH - APP.JS v0.9.0
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -2202,6 +2202,289 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  function salesHistorySummary() {
+    return salesState.history.reduce((acc, item) => {
+      const gold = Math.max(0, Number(item.gold || 0));
+      const energy = Number(item.energyDelta || 0);
+      acc.sales += 1;
+      acc.gold += gold;
+      acc.energy += energy;
+      acc[item.mode] = Number(acc[item.mode] || 0) + 1;
+      return acc;
+    }, {
+      sales: 0,
+      gold: 0,
+      energy: 0,
+      normal: 0,
+      discount: 0,
+      surcharge: 0
+    });
+  }
+
+  function expandedSalesStock() {
+    const units = [];
+    stockProjectsForSales().forEach(project => {
+      const qty = Math.max(0, Number(project.stock || 0));
+      for (let i = 0; i < qty; i += 1) {
+        units.push({ ...project, unitIndex: i });
+      }
+    });
+    return units;
+  }
+
+  function bestEconomicSurcharge(projects, energy = currentSalesEnergy()) {
+    return projects
+      .filter(project => project.saleEnergy.surcharge > 0)
+      .filter(project => energy >= project.saleEnergy.surcharge)
+      .map(project => ({
+        project,
+        extraGold: saleValue(project, 'surcharge') - saleValue(project, 'normal'),
+        energyCost: project.saleEnergy.surcharge,
+        efficiency: (saleValue(project, 'surcharge') - saleValue(project, 'normal')) /
+          Math.max(1, project.saleEnergy.surcharge)
+      }))
+      .sort((a, b) =>
+        b.efficiency - a.efficiency ||
+        b.extraGold - a.extraGold ||
+        Number(b.project.baseValue || 0) - Number(a.project.baseValue || 0)
+      )[0] || null;
+  }
+
+  function discountUnitEfficiency(project) {
+    const gain = Number(project.saleEnergy.discount || 0);
+    const sacrifice = Math.max(
+      0,
+      saleValue(project, 'normal') - saleValue(project, 'discount')
+    );
+    return {
+      project,
+      gain,
+      sacrifice,
+      efficiency: gain / Math.max(1, sacrifice)
+    };
+  }
+
+  function economicBridgePlan(projects) {
+    const currentEnergy = currentSalesEnergy();
+    const units = expandedSalesStock();
+    if (!units.length) return null;
+
+    let best = null;
+
+    units.forEach((target, targetIndex) => {
+      const surchargeCost = Number(target.saleEnergy.surcharge || 0);
+      if (surchargeCost <= currentEnergy || surchargeCost <= 0) return;
+
+      const discounts = units
+        .map((project, index) => ({ ...discountUnitEfficiency(project), index }))
+        .filter(item => item.index !== targetIndex)
+        .filter(item => item.gain > 0)
+        .sort((a, b) =>
+          b.efficiency - a.efficiency ||
+          a.sacrifice - b.sacrifice ||
+          b.gain - a.gain
+        );
+
+      let energy = currentEnergy;
+      let sacrifice = 0;
+      const used = [];
+
+      for (const item of discounts) {
+        if (energy >= surchargeCost) break;
+        energy += item.gain;
+        sacrifice += item.sacrifice;
+        used.push(item);
+      }
+
+      if (energy < surchargeCost) return;
+
+      const extraGold = Math.max(
+        0,
+        saleValue(target, 'surcharge') - saleValue(target, 'normal')
+      );
+      const netGain = extraGold - sacrifice;
+
+      const candidate = {
+        target,
+        discounts: used,
+        energyBefore: currentEnergy,
+        energyBeforeSurcharge: energy,
+        energyAfter: Math.max(0, energy - surchargeCost),
+        surchargeCost,
+        sacrifice,
+        extraGold,
+        netGain
+      };
+
+      if (!best ||
+          candidate.netGain > best.netGain ||
+          (candidate.netGain === best.netGain && candidate.extraGold > best.extraGold)) {
+        best = candidate;
+      }
+    });
+
+    return best;
+  }
+
+  function economicAdvisorPlan() {
+    const projects = stockProjectsForSales();
+    const energy = currentSalesEnergy();
+    const history = salesHistorySummary();
+
+    if (!projects.length) {
+      return {
+        mode: 'produce',
+        title: 'Produza antes de montar o próximo ciclo econômico',
+        text: 'Sem estoque, o melhor movimento é concluir as fabricações recomendadas. Assim o Advisor volta a comparar Desconto, Venda Normal e Sobretaxa.',
+        actionProject: null,
+        actionMode: null,
+        projectedGold: 0,
+        projectedEnergy: energy,
+        history
+      };
+    }
+
+    const surchargeNow = bestEconomicSurcharge(projects, energy);
+    if (surchargeNow) {
+      return {
+        mode: 'surcharge',
+        title: `Sobretaxe ${surchargeNow.project.name} agora`,
+        text: `Entre os itens em estoque que cabem na sua energia atual, esta é a melhor relação entre ouro extra e energia gasta: +${fmt(surchargeNow.extraGold)} ouro adicional por ${fmt(surchargeNow.energyCost)} de energia.`,
+        actionProject: surchargeNow.project,
+        actionMode: 'surcharge',
+        projectedGold: saleValue(surchargeNow.project, 'surcharge'),
+        projectedEnergy: Math.max(0, energy - surchargeNow.energyCost),
+        history
+      };
+    }
+
+    const bridge = economicBridgePlan(projects);
+    if (bridge && bridge.netGain > 0 && bridge.discounts.length) {
+      const first = bridge.discounts[0].project;
+      const discountCount = bridge.discounts.length;
+      return {
+        mode: 'build-energy',
+        title: `Gere energia com ${first.name}`,
+        text: `O melhor ciclo encontrado usa ${discountCount} desconto${discountCount === 1 ? '' : 's'} para alcançar a Sobretaxa de ${bridge.target.name}. O ganho extra da Sobretaxa supera o ouro sacrificado nos descontos em aproximadamente ${fmt(bridge.netGain)} ouro.`,
+        actionProject: first,
+        actionMode: 'discount',
+        projectedGold: saleValue(first, 'discount'),
+        projectedEnergy: energy + Number(first.saleEnergy.discount || 0),
+        bridge,
+        history
+      };
+    }
+
+    const discount = bestDiscountCandidate(projects);
+    if (discount) {
+      return {
+        mode: 'discount',
+        title: `Acumule energia com ${discount.project.name}`,
+        text: `Nenhuma Sobretaxa lucrativa está acessível agora. Este item entrega a melhor energia por ouro sacrificado entre o estoque atual.`,
+        actionProject: discount.project,
+        actionMode: 'discount',
+        projectedGold: saleValue(discount.project, 'discount'),
+        projectedEnergy: energy + discount.energyGain,
+        history
+      };
+    }
+
+    const normal = [...projects].sort((a, b) => Number(b.baseValue || 0) - Number(a.baseValue || 0))[0];
+    return {
+      mode: 'normal',
+      title: `Venda ${normal.name} normalmente`,
+      text: 'Com o estoque e a energia atuais, não há ciclo de Desconto + Sobretaxa que melhore o resultado econômico estimado.',
+      actionProject: normal,
+      actionMode: 'normal',
+      projectedGold: saleValue(normal, 'normal'),
+      projectedEnergy: energy,
+      history
+    };
+  }
+
+  function economicAdvisorHtml(plan) {
+    const h = plan.history || salesHistorySummary();
+    const bridge = plan.bridge;
+
+    return `
+      <div class="tp-economic-advisor">
+        <div class="tp-economic-head">
+          <div>
+            <span>🧠 ADVISOR ECONÔMICO</span>
+            <strong>${escapeHtml(plan.title)}</strong>
+            <small>${escapeHtml(plan.text)}</small>
+          </div>
+          <div class="tp-economic-projection">
+            <span>Após próximo passo</span>
+            <strong>+${fmt(plan.projectedGold)} 🪙</strong>
+            <small>${fmt(plan.projectedEnergy)} ⚡ estimados</small>
+          </div>
+        </div>
+
+        ${bridge ? `
+          <div class="tp-economic-cycle">
+            <span>ROTA ECONÔMICA</span>
+            <strong>${bridge.discounts.length} desconto${bridge.discounts.length === 1 ? '' : 's'} → Sobretaxa em ${escapeHtml(bridge.target.name)}</strong>
+            <small>
+              Ouro sacrificado: ${fmt(bridge.sacrifice)} •
+              Ouro extra da Sobretaxa: ${fmt(bridge.extraGold)} •
+              Ganho líquido estimado: ${fmt(bridge.netGain)}
+            </small>
+          </div>
+        ` : ''}
+
+        <div class="tp-economic-stats">
+          <div><span>Vendas registradas</span><strong>${fmt(h.sales)}</strong></div>
+          <div><span>Ouro gerado</span><strong>${fmt(h.gold)}</strong></div>
+          <div><span>Descontos</span><strong>${fmt(h.discount)}</strong></div>
+          <div><span>Sobretaxas</span><strong>${fmt(h.surcharge)}</strong></div>
+        </div>
+
+        ${plan.actionProject && plan.actionMode ? `
+          <button class="tp-economic-action" data-economic-sale-project="${plan.actionProject.id}" data-economic-sale-mode="${plan.actionMode}">
+            ⚡ EXECUTAR PRÓXIMA AÇÃO: ${escapeHtml(saleModeLabel(plan.actionMode).toUpperCase())}
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function performSale(project, mode) {
+    if (!project || Number(project.stock || 0) <= 0) {
+      return { ok: false, reason: 'stock' };
+    }
+
+    const energyDelta = saleEnergyDelta(project, mode);
+    if (mode === 'surcharge' && currentSalesEnergy() < Math.abs(energyDelta)) {
+      return { ok: false, reason: 'energy' };
+    }
+
+    const gold = saleValue(project, mode);
+    project.stock = Math.max(0, Number(project.stock || 0) - 1);
+
+    const accountSnapshot = readSalesAccount();
+    accountSnapshot.gold = Math.max(0, Number(accountSnapshot.gold || 0) + gold);
+    accountSnapshot.energy = Math.max(0, Number(accountSnapshot.energy || 0) + energyDelta);
+
+    salesState.history.unshift({
+      id: `sale-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      projectId: project.id,
+      projectName: project.name,
+      mode,
+      gold,
+      energyDelta,
+      createdAt: Date.now()
+    });
+    salesState.history = salesState.history.slice(0, 50);
+
+    saveCrafting();
+    writeSalesAccount(accountSnapshot);
+    saveSalesState();
+    updateCraftingUI();
+
+    return { ok: true, gold, energyDelta };
+  }
+
   function renderSalesAdvisor() {
     const host = document.getElementById("salesIntelligencePanel") || document.querySelector(".crafting-sales-link");
     if (!host) return;
@@ -2229,6 +2512,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <strong>${escapeHtml(recommendation.title)}</strong>
         <small>${escapeHtml(recommendation.text)}</small>
       </div>
+
+      ${economicAdvisorHtml(economicAdvisorPlan())}
 
       ${stock.length ? `
         <div class="tp-sales-grid">
@@ -2291,36 +2576,22 @@ document.addEventListener("DOMContentLoaded", () => {
       button.addEventListener("click", () => {
         const project = projectById(button.dataset.saleProject);
         const mode = button.dataset.saleMode;
-        if (!project || Number(project.stock || 0) <= 0) return;
-
-        const energyDelta = saleEnergyDelta(project, mode);
-        if (mode === "surcharge" && currentSalesEnergy() < Math.abs(energyDelta)) {
+        const result = performSale(project, mode);
+        if (!result.ok && result.reason === "energy") {
           alert("Você não possui energia suficiente para usar Sobretaxa neste item.");
-          return;
         }
+      });
+    });
 
-        const gold = saleValue(project, mode);
-        project.stock = Math.max(0, Number(project.stock || 0) - 1);
-
-        const accountSnapshot = readSalesAccount();
-        accountSnapshot.gold = Math.max(0, Number(accountSnapshot.gold || 0) + gold);
-        accountSnapshot.energy = Math.max(0, Number(accountSnapshot.energy || 0) + energyDelta);
-
-        salesState.history.unshift({
-          id: `sale-${Date.now()}`,
-          projectId: project.id,
-          projectName: project.name,
-          mode,
-          gold,
-          energyDelta,
-          createdAt: Date.now()
-        });
-        salesState.history = salesState.history.slice(0, 50);
-
-        saveCrafting();
-        writeSalesAccount(accountSnapshot);
-        saveSalesState();
-        updateCraftingUI();
+    host.querySelectorAll("[data-economic-sale-project]").forEach(button => {
+      button.addEventListener("click", () => {
+        const project = projectById(button.dataset.economicSaleProject);
+        const mode = button.dataset.economicSaleMode;
+        const result = performSale(project, mode);
+        if (!result.ok && result.reason === "energy") {
+          alert("A energia mudou e já não é suficiente para esta Sobretaxa. O Advisor foi recalculado.");
+          updateCraftingUI();
+        }
       });
     });
   }
@@ -4166,6 +4437,44 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(ensureSalesPanelRendered, 0);
       });
     });
+
+
+  const economicStyle = document.createElement("style");
+  economicStyle.id = "titanpath-economic-advisor-v090";
+  economicStyle.textContent = `
+    .tp-economic-advisor{
+      margin-top:14px;padding:16px;border-radius:14px;
+      border:1px solid rgba(255,211,106,.16);
+      background:linear-gradient(135deg,rgba(255,211,106,.055),rgba(35,209,139,.035));
+    }
+    .tp-economic-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .tp-economic-head>div:first-child{min-width:0}
+    .tp-economic-head span,.tp-economic-head strong,.tp-economic-head small{display:block}
+    .tp-economic-head>div:first-child>span{font-size:10px;font-weight:900;letter-spacing:1.1px;color:#ffd36a}
+    .tp-economic-head>div:first-child>strong{margin-top:6px;font-size:17px;color:#fff}
+    .tp-economic-head>div:first-child>small{margin-top:6px;color:#9eabbd;line-height:1.5}
+    .tp-economic-projection{flex:0 0 auto;min-width:150px;padding:10px 12px;border-radius:11px;background:rgba(0,0,0,.2);text-align:right}
+    .tp-economic-projection span{font-size:9px;color:#7e8a9b}
+    .tp-economic-projection strong{margin-top:4px;color:#ffd36a;font-size:16px}
+    .tp-economic-projection small{margin-top:3px;color:#9eabbd}
+    .tp-economic-cycle{margin-top:12px;padding:11px 12px;border-radius:11px;border:1px solid rgba(35,209,139,.14);background:rgba(35,209,139,.04)}
+    .tp-economic-cycle span,.tp-economic-cycle strong,.tp-economic-cycle small{display:block}
+    .tp-economic-cycle span{font-size:9px;font-weight:900;letter-spacing:1px;color:#7fe8bb}
+    .tp-economic-cycle strong{margin-top:4px;color:#fff}
+    .tp-economic-cycle small{margin-top:5px;color:#8f9caf;line-height:1.45}
+    .tp-economic-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+    .tp-economic-stats>div{padding:10px;border-radius:10px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.05)}
+    .tp-economic-stats span,.tp-economic-stats strong{display:block}
+    .tp-economic-stats span{font-size:9px;color:#7e8a9b}
+    .tp-economic-stats strong{margin-top:4px;color:#fff;font-size:15px}
+    .tp-economic-action{width:100%;margin-top:12px;min-height:44px;border:0;border-radius:11px;background:linear-gradient(90deg,#ffd36a,#f4b942);color:#19140a;font-weight:900;cursor:pointer}
+    @media(max-width:640px){
+      .tp-economic-head{flex-direction:column}
+      .tp-economic-projection{width:100%;text-align:left}
+      .tp-economic-stats{grid-template-columns:1fr 1fr}
+    }
+  `;
+  document.head.appendChild(economicStyle);
 
   document.head.appendChild(craftingStyle);
 
