@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.7.1
+   TITANPATH - APP.JS v0.7.2
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -1760,103 +1760,54 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function buildSmartSlotPlan() {
-    const freeIndexes = crafting.queue
-      .map((projectId, index) => projectId ? null : index)
-      .filter(index => index !== null);
+  function consumeFromComponentSnapshot(components, project) {
+    Object.entries(projectComponentRequirements(project)).forEach(([name, amount]) => {
+      components[name] = Math.max(0, Number(components[name] || 0) - Number(amount || 0));
+    });
+  }
 
-    const resources = { ...effectiveResources() };
+  function projectShortages(project, resources = effectiveResources(), components = effectiveComponents()) {
+    const r = Object.entries(project.resources || {}).map(([name, required]) => ({kind: "resource", name, required: Number(required || 0), available: Number(resources[name] || 0)})).filter(x => x.available < x.required);
+    const c = Object.entries(projectComponentRequirements(project)).map(([name, required]) => ({kind: "component", name, required: Number(required || 0), available: Number(components[name] || 0)})).filter(x => x.available < x.required);
+    return [...r, ...c].map(x => ({...x, missing: Math.max(0, x.required - x.available)})).sort((a,b) => b.missing-a.missing);
+  }
+
+  function buildSmartSlotPlan() {
+    const freeIndexes = crafting.queue.map((projectId,index) => projectId ? null : index).filter(index => index !== null);
+    const resources = {...effectiveResources()};
+    const components = {...effectiveComponents()};
     const ranked = getRankedProjects();
     const plan = [];
-
     freeIndexes.forEach(slotIndex => {
-      const candidate = ranked.find(project =>
-        canCraftWithResources(project, resources)
-      );
-
+      const candidate = ranked.find(project => canCraftWithResources(project, resources, components));
       if (!candidate) return;
-
-      plan.push({
-        slotIndex,
-        project: candidate
-      });
-
+      plan.push({slotIndex, project: candidate});
       consumeFromResourceSnapshot(resources, candidate);
+      consumeFromComponentSnapshot(components, candidate);
     });
-
-    return {
-      plan,
-      resourcesAfter: resources,
-      freeSlots: freeIndexes.length
-    };
+    return {plan, resourcesAfter: resources, componentsAfter: components, freeSlots: freeIndexes.length};
   }
 
   function detectAdvisorBottleneck() {
-    const ranked = getRankedProjects();
-    if (!ranked.length) return null;
-
-    const target = ranked[0];
-    const available = effectiveResources();
-    const capacities = shopResourceCapacities();
-
-    const shortages = Object.entries(target.resources || {})
-      .map(([resource, amount]) => ({
-        resource,
-        required: Number(amount || 0),
-        available: Number(available[resource] || 0),
-        capacity: capacities[resource] ?? null
-      }))
-      .filter(item => item.available < item.required)
-      .sort((a, b) =>
-        (b.required - b.available) - (a.required - a.available)
-      );
-
+    const ranked = getRankedProjects(); if (!ranked.length) return null;
+    const target=ranked[0], capacities=shopResourceCapacities();
+    const shortages=projectShortages(target,effectiveResources(),effectiveComponents());
     if (shortages.length) {
-      const bottleneck = shortages[0];
-      const bin = lowestBasicBinForResource(bottleneck.resource);
-
-      return {
-        type: "shortage",
-        ...bottleneck,
-        bin
-      };
+      const x=shortages[0];
+      if (x.kind === "component") return {type:"component-shortage",component:x.name,required:x.required,available:x.available,missing:x.missing};
+      return {type:"shortage",resource:x.name,required:x.required,available:x.available,capacity:capacities[x.name] ?? null,bin:lowestBasicBinForResource(x.name)};
     }
-
-    const freeSlots = freeCraftingSlots();
-    if (freeSlots > 0) {
-      const plan = buildSmartSlotPlan();
-
-      if (plan.plan.length < freeSlots) {
-        const demand = {};
-
-        plan.plan.forEach(({ project }) => {
-          Object.entries(project.resources || {}).forEach(([resource, amount]) => {
-            demand[resource] = Number(demand[resource] || 0) + Number(amount || 0);
-          });
-        });
-
-        const stressed = Object.entries(demand)
-          .map(([resource, amount]) => ({
-            resource,
-            amount,
-            available: Number(effectiveResources()[resource] || 0),
-            capacity: capacities[resource] ?? null
-          }))
-          .sort((a, b) =>
-            (b.amount / Math.max(1, b.available)) -
-            (a.amount / Math.max(1, a.available))
-          )[0];
-
-        if (stressed) {
-          return {
-            type: "slot-pressure",
-            ...stressed,
-            bin: lowestBasicBinForResource(stressed.resource)
-          };
-        }
+    const freeSlots=freeCraftingSlots();
+    if (freeSlots>0) {
+      const plan=buildSmartSlotPlan();
+      if (plan.plan.length<freeSlots) {
+        const post=ranked.flatMap(project => projectShortages(project,plan.resourcesAfter,plan.componentsAfter).map(x=>({...x,project}))).sort((a,b)=>a.missing-b.missing);
+        const comp=post.find(x=>x.kind==="component");
+        if (comp) return {type:"component-pressure",component:comp.name,required:comp.required,available:comp.available,missing:comp.missing,projectName:comp.project.name};
+        const res=post.find(x=>x.kind==="resource");
+        if (res) return {type:"slot-pressure",resource:res.name,amount:res.required,available:res.available,capacity:capacities[res.name] ?? null,bin:lowestBasicBinForResource(res.name)};
       }
     }
-
     return null;
   }
 
@@ -1874,6 +1825,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const bottleneck = detectAdvisorBottleneck();
 
     if (!plan.plan.length && freeCraftingSlots() > 0) {
+      if (bottleneck?.type === "component-shortage") {
+        return {level:"warning",title:`${bottleneck.component} está travando sua fabricação`,text:`O melhor projeto atual precisa de ${fmt(bottleneck.required)} de ${bottleneck.component}, mas você possui ${fmt(bottleneck.available)}. Faltam ${fmt(bottleneck.missing)}.`};
+      }
       if (bottleneck?.type === "shortage") {
         return {
           level: "warning",
@@ -2390,6 +2344,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function advisorBottleneckHtml(bottleneck) {
+    if (bottleneck.type === "component-shortage") {
+      return `<div class="tp-advisor-bottleneck"><span>🧩 COMPONENTE EM FALTA</span><strong>${escapeHtml(bottleneck.component)}</strong><small>Você possui ${fmt(bottleneck.available)} e precisa de ${fmt(bottleneck.required)}. Faltam ${fmt(bottleneck.missing)} para fabricar o projeto recomendado.</small></div>`;
+    }
+    if (bottleneck.type === "component-pressure") {
+      return `<div class="tp-advisor-bottleneck"><span>🧩 COMPONENTE LIMITANTE</span><strong>${escapeHtml(bottleneck.component)}</strong><small>Depois de reservar os crafts planejados, este componente impede preencher outro slot. ${bottleneck.projectName ? `Projeto afetado: ${escapeHtml(bottleneck.projectName)}.` : ""} Faltam ${fmt(bottleneck.missing)}.</small></div>`;
+    }
     if (bottleneck.type === "shortage") {
       const missing = Math.max(0, bottleneck.required - bottleneck.available);
 
