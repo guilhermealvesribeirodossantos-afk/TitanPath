@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.7.3
+   TITANPATH - APP.JS v0.7.4
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -1879,20 +1879,70 @@ document.addEventListener("DOMContentLoaded", () => {
     return [...r, ...c].map(x => ({...x, missing: Math.max(0, x.required - x.available)})).sort((a,b) => b.missing-a.missing);
   }
 
-  function buildSmartSlotPlan() {
-    const freeIndexes = crafting.queue.map((projectId,index) => projectId ? null : index).filter(index => index !== null);
-    const resources = {...effectiveResources()};
-    const components = {...effectiveComponents()};
+  function advisorPlanProjectValue(project) {
     const ranked = getRankedProjects();
-    const plan = [];
-    freeIndexes.forEach(slotIndex => {
-      const candidate = ranked.find(project => canCraftWithResources(project, resources, components));
-      if (!candidate) return;
-      plan.push({slotIndex, project: candidate});
-      consumeFromResourceSnapshot(resources, candidate);
-      consumeFromComponentSnapshot(components, candidate);
-    });
-    return {plan, resourcesAfter: resources, componentsAfter: components, freeSlots: freeIndexes.length};
+    const found = ranked.find(item => item.id === project.id);
+    return Number(found?.score || 0);
+  }
+
+  function advisorPlanScore(projects) {
+    if (!projects.length) return null;
+    const totalScore = projects.reduce((sum, project) => sum + advisorPlanProjectValue(project), 0);
+    const totalXpPerMin = projects.reduce((sum, project) => sum + projectXpPerMin(project), 0);
+    const totalGoldPerMin = projects.reduce((sum, project) => sum + projectGoldPerMin(project), 0);
+    const distinctProjects = new Set(projects.map(project => project.id)).size;
+    let diversityBonus = 0;
+    if (crafting.strategy === "fast-growth") diversityBonus = Math.max(0, distinctProjects - 1) * 0.035;
+    else if (crafting.strategy === "balanced") diversityBonus = Math.max(0, distinctProjects - 1) * 0.02;
+    return { value: totalScore + diversityBonus, totalScore, totalXpPerMin, totalGoldPerMin, distinctProjects };
+  }
+
+  function optimizeCraftingCombination(slotCount, resources, components) {
+    const ranked = getRankedProjects();
+    if (!slotCount || !ranked.length) return { projects: [], resourcesAfter: { ...resources }, componentsAfter: { ...components }, metrics: null };
+    const candidates = ranked.slice(0, Math.min(18, ranked.length));
+    let best = { projects: [], resourcesAfter: { ...resources }, componentsAfter: { ...components }, metrics: null };
+
+    function isBetter(projects, metrics) {
+      if (projects.length !== best.projects.length) return projects.length > best.projects.length;
+      if (!best.metrics) return true;
+      if (Math.abs(metrics.value - best.metrics.value) > 1e-9) return metrics.value > best.metrics.value;
+      if (crafting.strategy === "gold") return metrics.totalGoldPerMin > best.metrics.totalGoldPerMin;
+      if (crafting.strategy === "xp") return metrics.totalXpPerMin > best.metrics.totalXpPerMin;
+      if (crafting.strategy === "balanced") return (metrics.totalXpPerMin + metrics.totalGoldPerMin) > (best.metrics.totalXpPerMin + best.metrics.totalGoldPerMin);
+      return metrics.totalXpPerMin > best.metrics.totalXpPerMin;
+    }
+
+    function visit(depth, chosen, resSnapshot, compSnapshot, startIndex = 0) {
+      if (chosen.length) {
+        const metrics = advisorPlanScore(chosen);
+        if (isBetter(chosen, metrics)) best = { projects: [...chosen], resourcesAfter: { ...resSnapshot }, componentsAfter: { ...compSnapshot }, metrics };
+      }
+      if (depth >= slotCount) return;
+      for (let i = startIndex; i < candidates.length; i += 1) {
+        const project = candidates[i];
+        if (!canCraftWithResources(project, resSnapshot, compSnapshot)) continue;
+        const nextResources = { ...resSnapshot };
+        const nextComponents = { ...compSnapshot };
+        consumeFromResourceSnapshot(nextResources, project);
+        consumeFromComponentSnapshot(nextComponents, project);
+        chosen.push(project);
+        visit(depth + 1, chosen, nextResources, nextComponents, i);
+        chosen.pop();
+      }
+    }
+
+    visit(0, [], { ...resources }, { ...components }, 0);
+    return best;
+  }
+
+  function buildSmartSlotPlan() {
+    const freeIndexes = crafting.queue.map((projectId, index) => projectId ? null : index).filter(index => index !== null);
+    const resources = { ...effectiveResources() };
+    const components = { ...effectiveComponents() };
+    const optimized = optimizeCraftingCombination(freeIndexes.length, resources, components);
+    const plan = optimized.projects.map((project, index) => ({ slotIndex: freeIndexes[index], project }));
+    return { plan, resourcesAfter: optimized.resourcesAfter, componentsAfter: optimized.componentsAfter, freeSlots: freeIndexes.length, metrics: optimized.metrics };
   }
 
   function detectAdvisorBottleneck() {
@@ -1969,7 +2019,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       level: "good",
       title: "Sua fabricação está pronta para crescer",
-      text: `O Advisor encontrou um plano para preencher os ${freeCraftingSlots()} slots livres com base no modo ${strategyLabel()}.`
+      text: `O Advisor comparou combinações fabricáveis e encontrou o melhor plano para preencher os ${freeCraftingSlots()} slots livres no modo ${strategyLabel()}.`
     };
   }
 
@@ -2391,7 +2441,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="tp-advisor-plan">
             <div class="tp-advisor-plan-title">
               <strong>Plano automático</strong>
-              <small>${planData.plan.length}/${planData.freeSlots} slots livres planejados</small>
+              <small>${planData.plan.length}/${planData.freeSlots} slots livres planejados${planData.metrics ? ` • ${fmt(planData.metrics.totalXpPerMin, 1)} XP/min total • ${fmt(planData.metrics.totalGoldPerMin, 1)} ouro/min total` : ""}</small>
             </div>
 
             ${
