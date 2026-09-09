@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.7.2
+   TITANPATH - APP.JS v0.7.3
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -1339,7 +1339,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 /* =========================================================
-   TITANPATH - FABRICAÇÃO INTELIGENTE v0.3.1
+   TITANPATH - FABRICAÇÃO INTELIGENTE v0.3.2
    Projetos desbloqueados + componentes + slots + XP/min + ouro/min + Advisor
 ========================================================= */
 
@@ -1370,7 +1370,96 @@ document.addEventListener("DOMContentLoaded", () => {
     queue: [null, null, null, null]
   };
 
-  let crafting = loadCrafting();
+  const RESOURCE_ALIASES = {
+    "madeira": "Madeira",
+    "wood": "Madeira",
+    "ferro": "Ferro",
+    "iron": "Ferro",
+    "couro": "Couro",
+    "leather": "Couro",
+    "ervas": "Ervas",
+    "erva": "Ervas",
+    "herbs": "Ervas",
+    "herb": "Ervas",
+    "aco": "Aço",
+    "steel": "Aço",
+    "madeira de ferro": "Madeira de Ferro",
+    "ironwood": "Madeira de Ferro",
+    "tecido": "Tecido",
+    "fabric": "Tecido",
+    "oleo": "Óleo",
+    "oil": "Óleo",
+    "joias": "Joias",
+    "joia": "Joias",
+    "jewels": "Joias",
+    "jewel": "Joias",
+    "eter": "Éter",
+    "ether": "Éter",
+    "essencia": "Essência",
+    "essence": "Essência",
+    "poeira estelar": "Poeira Estelar",
+    "stardust": "Poeira Estelar"
+  };
+
+  function normalizeResourceKey(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\\u0300-\\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/[_-]+/g, " ")
+      .replace(/\\s+/g, " ");
+  }
+
+  function canonicalResourceName(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    return RESOURCE_ALIASES[normalizeResourceKey(raw)] || raw;
+  }
+
+  function canonicalizeResourceObject(input = {}, mode = "max") {
+    const output = {};
+
+    Object.entries(input || {}).forEach(([rawName, rawAmount]) => {
+      const name = canonicalResourceName(rawName);
+      if (!name) return;
+
+      const amount = Math.max(0, Number(rawAmount || 0));
+      if (!(name in output)) {
+        output[name] = amount;
+      } else if (mode === "sum") {
+        output[name] += amount;
+      } else {
+        // Saldo duplicado PT/EN representa o mesmo recurso; nunca somar para não inflar o estoque.
+        output[name] = Math.max(output[name], amount);
+      }
+    });
+
+    return output;
+  }
+
+  function canonicalizeProjectResources(project) {
+    if (!project) return project;
+    project.resources = canonicalizeResourceObject(project.resources || {}, "max");
+    return project;
+  }
+
+  function migrateCraftingResourceNames(target) {
+    if (!target) return target;
+
+    target.resources = {
+      ...cloneCrafting(DEFAULT_CRAFTING.resources),
+      ...canonicalizeResourceObject(target.resources || {}, "max")
+    };
+
+    if (Array.isArray(target.projects)) {
+      target.projects.forEach(canonicalizeProjectResources);
+    }
+
+    return target;
+  }
+
+  let crafting = migrateCraftingResourceNames(loadCrafting());
 
   let blueprintCatalog = [];
   let blueprintResourceCatalog = Object.keys(crafting.resources);
@@ -1388,12 +1477,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
       blueprintCatalog = Array.isArray(data.blueprints) ? data.blueprints : [];
 
+      // Garante PT-BR canônico mesmo se alguma versão anterior do catálogo/projeto tiver inglês.
+      blueprintCatalog.forEach(blueprint => {
+        if (Array.isArray(blueprint.resources)) {
+          blueprint.resources = blueprint.resources.map(resource => ({
+            ...resource,
+            name: canonicalResourceName(resource.name)
+          }));
+        }
+      });
+
       if (Array.isArray(data.resourceCatalog)) {
         blueprintResourceCatalog = [...new Set([
           ...Object.keys(crafting.resources),
-          ...data.resourceCatalog
-        ])];
+          ...data.resourceCatalog.map(canonicalResourceName)
+        ].filter(Boolean))];
       }
+
+      crafting = migrateCraftingResourceNames(crafting);
+      blueprintResourceCatalog = [...new Set(
+        blueprintResourceCatalog.map(canonicalResourceName).filter(Boolean)
+      )];
 
       blueprintResourceCatalog.forEach(resource => {
         if (!(resource in crafting.resources)) crafting.resources[resource] = 0;
@@ -1435,7 +1539,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       syncQueueLength(merged);
 
-      return merged;
+      return migrateCraftingResourceNames(merged);
     } catch (error) {
       console.error("Erro ao carregar fabricação:", error);
       return cloneCrafting(DEFAULT_CRAFTING);
@@ -1494,7 +1598,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!queuedProject) return;
 
       Object.entries(queuedProject.resources || {}).forEach(([resource, amount]) => {
-        reserved[resource] = Number(reserved[resource] || 0) + Number(amount || 0);
+        const canonical = canonicalResourceName(resource);
+        reserved[canonical] = Number(reserved[canonical] || 0) + Number(amount || 0);
       });
     });
 
@@ -1506,9 +1611,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const available = {};
 
     Object.entries(crafting.resources || {}).forEach(([resource, amount]) => {
-      available[resource] = Math.max(
+      const canonical = canonicalResourceName(resource);
+      available[canonical] = Math.max(
         0,
-        Number(amount || 0) - Number(reserved[resource] || 0)
+        Number(amount || 0) - Number(reserved[canonical] || 0)
       );
     });
 
@@ -1548,9 +1654,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function canCraftWithResources(project, resources, components = effectiveComponents()) {
-    const req = project.resources || {};
+    const req = canonicalizeResourceObject(project.resources || {}, "max");
     const resourcesOk = Object.entries(req).every(([resource, amount]) => {
-      return Number(resources[resource] || 0) >= Number(amount || 0);
+      return Number(resources[canonicalResourceName(resource)] || 0) >= Number(amount || 0);
     });
     if (!resourcesOk) return false;
     return Object.entries(projectComponentRequirements(project)).every(([name, amount]) => {
@@ -1752,10 +1858,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function consumeFromResourceSnapshot(resources, project) {
-    Object.entries(project.resources || {}).forEach(([resource, amount]) => {
-      resources[resource] = Math.max(
+    Object.entries(canonicalizeResourceObject(project.resources || {}, "max")).forEach(([resource, amount]) => {
+      const canonical = canonicalResourceName(resource);
+      resources[canonical] = Math.max(
         0,
-        Number(resources[resource] || 0) - Number(amount || 0)
+        Number(resources[canonical] || 0) - Number(amount || 0)
       );
     });
   }
@@ -1767,7 +1874,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function projectShortages(project, resources = effectiveResources(), components = effectiveComponents()) {
-    const r = Object.entries(project.resources || {}).map(([name, required]) => ({kind: "resource", name, required: Number(required || 0), available: Number(resources[name] || 0)})).filter(x => x.available < x.required);
+    const r = Object.entries(canonicalizeResourceObject(project.resources || {}, "max")).map(([name, required]) => ({kind: "resource", name: canonicalResourceName(name), required: Number(required || 0), available: Number(resources[canonicalResourceName(name)] || 0)})).filter(x => x.available < x.required);
     const c = Object.entries(projectComponentRequirements(project)).map(([name, required]) => ({kind: "component", name, required: Number(required || 0), available: Number(components[name] || 0)})).filter(x => x.available < x.required);
     return [...r, ...c].map(x => ({...x, missing: Math.max(0, x.required - x.available)})).sort((a,b) => b.missing-a.missing);
   }
@@ -1990,10 +2097,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function consumeResources(project) {
-    const req = project.resources || {};
+    const req = canonicalizeResourceObject(project.resources || {}, "max");
 
     Object.entries(req).forEach(([resource, amount]) => {
-      crafting.resources[resource] = Math.max(0, Number(crafting.resources[resource] || 0) - Number(amount || 0));
+      const canonical = canonicalResourceName(resource);
+      crafting.resources[canonical] = Math.max(0, Number(crafting.resources[canonical] || 0) - Number(amount || 0));
     });
 
     Object.entries(projectComponentRequirements(project)).forEach(([name, amount]) => {
@@ -2555,7 +2663,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const names = [...new Set([
       ...blueprintResourceCatalog,
       ...Object.keys(crafting.resources)
-    ])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    ].map(canonicalResourceName).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     const capacities = shopResourceCapacities();
 
@@ -2627,9 +2735,11 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       document.querySelectorAll("[data-crafting-resource]").forEach(input => {
-        const name = input.dataset.craftingResource;
+        const name = canonicalResourceName(input.dataset.craftingResource);
         crafting.resources[name] = Math.max(0, Number(input.value || 0));
       });
+
+      crafting = migrateCraftingResourceNames(crafting);
 
       document.querySelectorAll("[data-crafting-component]").forEach(input => {
         const name = input.dataset.craftingComponent;
@@ -2716,9 +2826,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("projectResourceInputs");
     if (!container) return;
 
+    values = canonicalizeResourceObject(values || {}, "max");
+
     const providedNames = Object.entries(values || {})
       .filter(([, amount]) => Number(amount) > 0)
-      .map(([name]) => name);
+      .map(([name]) => canonicalResourceName(name));
 
     const names = (
       providedNames.length
@@ -2742,10 +2854,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const output = {};
 
     (blueprint?.resources || []).forEach(resource => {
-      output[resource.name] = Number(resource.amount || 0);
+      const name = canonicalResourceName(resource.name);
+      output[name] = Math.max(Number(output[name] || 0), Number(resource.amount || 0));
     });
 
-    return output;
+    return canonicalizeResourceObject(output, "max");
   }
 
   function openProjectEditor(id = null, catalogBlueprint = null) {
