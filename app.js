@@ -1,5 +1,5 @@
 /* =========================================================
-   TITANPATH - APP.JS v0.7.4
+   TITANPATH - APP.JS v0.8.0
    Loja individualizada + Fabricação + Titan Advisor Inteligente
 ========================================================= */
 
@@ -2039,6 +2039,268 @@ document.addEventListener("DOMContentLoaded", () => {
     return `Recursos atualizados há ${days} dia${days === 1 ? "" : "s"}.`;
   }
 
+
+  /* =========================================================
+     VENDAS INTELIGENTES v0.8.0
+     Base: estoque dos projetos + valor base + energia oficial
+  ========================================================= */
+  const SALES_STORAGE_KEY = "titanpath_sales_v080";
+
+  function loadSalesState() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SALES_STORAGE_KEY) || "null");
+      return parsed && typeof parsed === "object"
+        ? { history: Array.isArray(parsed.history) ? parsed.history : [] }
+        : { history: [] };
+    } catch {
+      return { history: [] };
+    }
+  }
+
+  const salesState = loadSalesState();
+
+  function saveSalesState() {
+    localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(salesState));
+  }
+
+  function salesEnergy(project) {
+    const energy = project?.energy || {};
+    return {
+      discount: Math.max(0, Number(energy.discount || 0)),
+      surcharge: Math.max(0, Number(energy.surcharge || 0)),
+      suggest: Math.max(0, Number(energy.suggest || 0))
+    };
+  }
+
+  function saleValue(project, mode) {
+    const base = Math.max(0, Number(project?.baseValue || 0));
+    if (mode === "discount") return Math.round(base * 0.5);
+    if (mode === "surcharge") return Math.round(base * 2);
+    return Math.round(base);
+  }
+
+  function saleEnergyDelta(project, mode) {
+    const energy = salesEnergy(project);
+    if (mode === "discount") return energy.discount;
+    if (mode === "surcharge") return -energy.surcharge;
+    return 0;
+  }
+
+  function saleModeLabel(mode) {
+    return {
+      normal: "Venda normal",
+      discount: "Desconto",
+      surcharge: "Sobretaxa"
+    }[mode] || "Venda";
+  }
+
+  function stockProjectsForSales() {
+    return crafting.projects
+      .filter(project => Number(project.stock || 0) > 0)
+      .map(project => ({
+        ...project,
+        saleEnergy: salesEnergy(project)
+      }));
+  }
+
+  function bestSurchargeCandidate(projects) {
+    const currentEnergy = Number(account.energy || 0);
+
+    return projects
+      .filter(project => project.saleEnergy.surcharge > 0)
+      .filter(project => currentEnergy >= project.saleEnergy.surcharge)
+      .map(project => ({
+        project,
+        extraGold: Math.max(0, saleValue(project, "surcharge") - saleValue(project, "normal")),
+        efficiency: Math.max(0, saleValue(project, "surcharge") - saleValue(project, "normal")) /
+          Math.max(1, project.saleEnergy.surcharge)
+      }))
+      .sort((a, b) =>
+        b.efficiency - a.efficiency ||
+        b.extraGold - a.extraGold ||
+        Number(b.project.baseValue || 0) - Number(a.project.baseValue || 0)
+      )[0] || null;
+  }
+
+  function bestDiscountCandidate(projects) {
+    return projects
+      .filter(project => project.saleEnergy.discount > 0)
+      .map(project => ({
+        project,
+        energyGain: project.saleEnergy.discount,
+        sacrificedGold: Math.max(0, saleValue(project, "normal") - saleValue(project, "discount")),
+        efficiency: project.saleEnergy.discount /
+          Math.max(1, saleValue(project, "normal") - saleValue(project, "discount"))
+      }))
+      .sort((a, b) =>
+        b.efficiency - a.efficiency ||
+        b.energyGain - a.energyGain ||
+        Number(a.project.baseValue || 0) - Number(b.project.baseValue || 0)
+      )[0] || null;
+  }
+
+  function salesRecommendation() {
+    const projects = stockProjectsForSales();
+    if (!projects.length) {
+      return {
+        mode: "none",
+        project: null,
+        title: "Produza itens antes de vender",
+        text: "Seu estoque cadastrado está zerado. Conclua fabricações para o Titan Advisor montar uma estratégia de vendas."
+      };
+    }
+
+    const surcharge = bestSurchargeCandidate(projects);
+    if (surcharge) {
+      return {
+        mode: "surcharge",
+        project: surcharge.project,
+        title: `Use Sobretaxa em ${surcharge.project.name}`,
+        text: `Você tem energia suficiente. A venda passa de ${fmt(saleValue(surcharge.project, "normal"))} para ${fmt(saleValue(surcharge.project, "surcharge"))} ouro, usando ${fmt(surcharge.project.saleEnergy.surcharge)} de energia.`
+      };
+    }
+
+    const discount = bestDiscountCandidate(projects);
+    if (discount) {
+      return {
+        mode: "discount",
+        project: discount.project,
+        title: `Gere energia com ${discount.project.name}`,
+        text: `Você ainda não tem energia suficiente para a melhor Sobretaxa disponível. Descontar este item gera ${fmt(discount.energyGain)} de energia com menor sacrifício relativo de ouro entre os itens em estoque.`
+      };
+    }
+
+    const highest = [...projects].sort((a,b) => Number(b.baseValue||0)-Number(a.baseValue||0))[0];
+    return {
+      mode: "normal",
+      project: highest,
+      title: `Venda ${highest.name} normalmente`,
+      text: "Nenhuma ação de energia disponível foi encontrada para o estoque atual."
+    };
+  }
+
+  function renderSalesAdvisor() {
+    const host = document.querySelector(".crafting-sales-link");
+    if (!host) return;
+
+    const recommendation = salesRecommendation();
+    const stock = stockProjectsForSales();
+    const recent = salesState.history.slice(0, 5);
+
+    host.classList.add("tp-sales-panel");
+    host.innerHTML = `
+      <div class="tp-sales-heading">
+        <div>
+          <span class="eyebrow gold-text">💸 VENDAS INTELIGENTES</span>
+          <h3>Transforme estoque em ouro e energia</h3>
+          <p>O Titan Advisor compara Venda Normal, Desconto e Sobretaxa usando seu estoque, valor base e energia atual.</p>
+        </div>
+        <div class="tp-sales-energy">
+          <span>⚡ Energia atual</span>
+          <strong>${fmt(account.energy || 0)}</strong>
+        </div>
+      </div>
+
+      <div class="tp-sales-recommendation ${recommendation.mode}">
+        <span>PRÓXIMA AÇÃO</span>
+        <strong>${escapeHtml(recommendation.title)}</strong>
+        <small>${escapeHtml(recommendation.text)}</small>
+      </div>
+
+      ${stock.length ? `
+        <div class="tp-sales-grid">
+          ${stock.map(project => {
+            const e = project.saleEnergy;
+            const canSurcharge = e.surcharge > 0 && Number(account.energy || 0) >= e.surcharge;
+            return `
+              <article class="tp-sale-card">
+                <div class="tp-sale-card-top">
+                  <div>
+                    <strong>${escapeHtml(project.name)}</strong>
+                    <small>Tier ${fmt(project.tier)} • Estoque ${fmt(project.stock)}</small>
+                  </div>
+                  <span>${fmt(project.baseValue)} 🪙</span>
+                </div>
+
+                <div class="tp-sale-options">
+                  <button data-sale-mode="normal" data-sale-project="${project.id}">
+                    <span>Venda normal</span>
+                    <strong>${fmt(saleValue(project, "normal"))} 🪙</strong>
+                    <small>Energia: neutra*</small>
+                  </button>
+
+                  <button data-sale-mode="discount" data-sale-project="${project.id}" ${e.discount <= 0 ? "disabled" : ""}>
+                    <span>Desconto</span>
+                    <strong>${fmt(saleValue(project, "discount"))} 🪙</strong>
+                    <small>+${fmt(e.discount)} ⚡</small>
+                  </button>
+
+                  <button data-sale-mode="surcharge" data-sale-project="${project.id}" ${!canSurcharge ? "disabled" : ""}>
+                    <span>Sobretaxa</span>
+                    <strong>${fmt(saleValue(project, "surcharge"))} 🪙</strong>
+                    <small>-${fmt(e.surcharge)} ⚡</small>
+                  </button>
+                </div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      ` : `
+        <div class="tp-sales-empty">Nenhum item com estoque disponível para venda.</div>
+      `}
+
+      <small class="tp-sales-note">*A energia obtida na Venda Normal depende de outras mecânicas da loja; por enquanto o TitanPath mantém essa ação neutra para não inventar um valor.</small>
+
+      ${recent.length ? `
+        <div class="tp-sales-history">
+          <strong>Últimas vendas registradas</strong>
+          ${recent.map(item => `
+            <div>
+              <span>${escapeHtml(item.projectName)} • ${escapeHtml(saleModeLabel(item.mode))}</span>
+              <small>+${fmt(item.gold)} ouro ${item.energyDelta ? `• ${item.energyDelta > 0 ? "+" : ""}${fmt(item.energyDelta)} ⚡` : ""}</small>
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+    `;
+
+    host.querySelectorAll("[data-sale-project]").forEach(button => {
+      button.addEventListener("click", () => {
+        const project = projectById(button.dataset.saleProject);
+        const mode = button.dataset.saleMode;
+        if (!project || Number(project.stock || 0) <= 0) return;
+
+        const energyDelta = saleEnergyDelta(project, mode);
+        if (mode === "surcharge" && Number(account.energy || 0) < Math.abs(energyDelta)) {
+          alert("Você não possui energia suficiente para usar Sobretaxa neste item.");
+          return;
+        }
+
+        const gold = saleValue(project, mode);
+        project.stock = Math.max(0, Number(project.stock || 0) - 1);
+        account.gold = Math.max(0, Number(account.gold || 0) + gold);
+        account.energy = Math.max(0, Number(account.energy || 0) + energyDelta);
+
+        salesState.history.unshift({
+          id: `sale-${Date.now()}`,
+          projectId: project.id,
+          projectName: project.name,
+          mode,
+          gold,
+          energyDelta,
+          createdAt: Date.now()
+        });
+        salesState.history = salesState.history.slice(0, 50);
+
+        saveCrafting();
+        saveAccount();
+        saveSalesState();
+        updateDashboard();
+        updateCraftingUI();
+      });
+    });
+  }
+
   function updateCraftingUI() {
     syncQueueLength();
 
@@ -2064,6 +2326,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderBlueprints();
     renderCraftingAdvisor();
     renderSmartResourceStatus();
+    renderSalesAdvisor();
   }
 
   function renderCraftingSlots() {
@@ -3831,6 +4094,31 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   `;
+
+
+  const salesStyle = document.createElement("style");
+  salesStyle.id = "titanpath-sales-v080";
+  salesStyle.textContent = `
+    .tp-sales-panel{display:block!important;padding:18px!important}
+    .tp-sales-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .tp-sales-heading h3{margin-top:5px;font-size:20px}
+    .tp-sales-heading p{margin-top:6px;color:#8c99aa;line-height:1.5;max-width:780px}
+    .tp-sales-energy{min-width:125px;padding:10px 12px;border-radius:12px;background:#0a1017;border:1px solid rgba(244,185,66,.18);text-align:right}
+    .tp-sales-energy span,.tp-sales-energy strong{display:block}.tp-sales-energy span{font-size:9px;color:#8c99aa}.tp-sales-energy strong{margin-top:3px;color:#ffd36a;font-size:20px}
+    .tp-sales-recommendation{margin-top:14px;padding:13px;border-radius:12px;background:rgba(35,209,139,.055);border:1px solid rgba(35,209,139,.18)}
+    .tp-sales-recommendation span,.tp-sales-recommendation strong,.tp-sales-recommendation small{display:block}
+    .tp-sales-recommendation span{font-size:9px;color:#ffd36a;font-weight:900;letter-spacing:.12em}.tp-sales-recommendation strong{margin-top:5px;font-size:16px}.tp-sales-recommendation small{margin-top:5px;color:#9aa5b4;line-height:1.45}
+    .tp-sales-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+    .tp-sale-card{padding:12px;border-radius:13px;background:#0a1017;border:1px solid rgba(255,255,255,.065)}
+    .tp-sale-card-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.tp-sale-card-top strong,.tp-sale-card-top small{display:block}.tp-sale-card-top small{margin-top:3px;color:#6e7887;font-size:9px}.tp-sale-card-top>span{color:#ffd36a;font-weight:900;white-space:nowrap}
+    .tp-sale-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}.tp-sale-options button{padding:9px 7px;border-radius:9px;background:#101823;border:1px solid rgba(255,255,255,.07);color:#f4f7fb;cursor:pointer;text-align:left}.tp-sale-options button:hover:not(:disabled){border-color:rgba(244,185,66,.35)}.tp-sale-options button:disabled{opacity:.35;cursor:not-allowed}.tp-sale-options span,.tp-sale-options strong,.tp-sale-options small{display:block}.tp-sale-options span{font-size:8px;color:#8c99aa}.tp-sale-options strong{margin-top:3px;font-size:11px}.tp-sale-options small{margin-top:3px;font-size:8px;color:#6e7887}
+    .tp-sales-note{display:block;margin-top:10px;color:#66717f;font-size:8px;line-height:1.4}
+    .tp-sales-empty{margin-top:14px;padding:16px;border-radius:11px;border:1px dashed rgba(255,255,255,.08);color:#8c99aa;text-align:center}
+    .tp-sales-history{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}.tp-sales-history>strong{font-size:12px}.tp-sales-history>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}.tp-sales-history span{font-size:10px}.tp-sales-history small{font-size:9px;color:#7f8b9b}
+    @media(max-width:720px){.tp-sales-heading{flex-direction:column}.tp-sales-energy{width:100%;text-align:left}.tp-sales-grid{grid-template-columns:1fr}.tp-sale-options{grid-template-columns:1fr 1fr 1fr}}
+    @media(max-width:430px){.tp-sale-options{grid-template-columns:1fr}.tp-sales-history>div{flex-direction:column;gap:3px}}
+  `;
+  document.head.appendChild(salesStyle);
 
   document.head.appendChild(craftingStyle);
 
