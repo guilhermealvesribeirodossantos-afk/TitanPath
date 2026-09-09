@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="TitanPath - Painel pessoal de evolução e estratégia para Shop Titans.">
   <meta name="theme-color" content="#080b10">
-  <title>TitanPath | Shop Titans Companion</title>
-  <link rel="stylesheet" href="style.css?v=0.8.2">
+  <title>TitanPath Pro Coach | Shop Titans Companion</title>
+  <link rel="stylesheet" href="style.css?v=1.0.0">
 </head>
 <body>
 <div class="app">
@@ -21,10 +21,10 @@
     </div>
 
     <nav class="sidebar-nav">
-      <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Início</span></button>
+      <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Hoje</span></button>
       <button class="nav-item" data-page="account"><span class="nav-icon">👤</span><span>Minha Conta</span></button>
-      <button class="nav-item" data-page="shop"><span class="nav-icon">🏪</span><span>Minha Loja</span></button>
-      <button class="nav-item" data-page="crafting"><span class="nav-icon">🔨</span><span>Fabricação</span></button>
+      <button class="nav-item" data-page="shop"><span class="nav-icon">🏪</span><span>Detalhes da Loja</span></button>
+      <button class="nav-item" data-page="crafting"><span class="nav-icon">🔨</span><span>Detalhes da Fabricação</span></button>
       <button class="nav-item" data-page="heroes"><span class="nav-icon">⚔️</span><span>Heróis</span></button>
       <button class="nav-item" data-page="champions"><span class="nav-icon">🏆</span><span>Campeões</span></button>
       <button class="nav-item" data-page="investments"><span class="nav-icon">🏛️</span><span>Investimentos</span></button>
@@ -72,6 +72,14 @@
             <span class="hero-label">SUA JORNADA</span>
             <h2>Construa seu <span>império.</span></h2>
             <p>Planeje sua conta, evolua com inteligência e transforme cada moeda em progresso.</p>
+          </div>
+        </section>
+
+        <section class="panel tp-pro-coach" id="proCoachPanel">
+          <div class="tp-pro-coach-loading">
+            <span>🧠 TITANPATH PRO COACH</span>
+            <strong>Analisando sua conta...</strong>
+            <small>Fabricação, estoque, energia, vendas e gargalos.</small>
           </div>
         </section>
 
@@ -494,7 +502,7 @@
     </div>
 
     <nav class="mobile-nav">
-      <button class="mobile-nav-item active" data-page="dashboard"><span>⌂</span><small>Início</small></button>
+      <button class="mobile-nav-item active" data-page="dashboard"><span>🎯</span><small>Hoje</small></button>
       <button class="mobile-nav-item" data-page="shop"><span>🏪</span><small>Loja</small></button>
       <button class="mobile-nav-item" data-page="crafting"><span>🔨</span><small>Fabricar</small></button>
       <button class="mobile-nav-item" data-page="goals"><span>🎯</span><small>Metas</small></button>
@@ -505,6 +513,6 @@
 </div>
 
 <!-- Cache-busting da versão atual -->
-<script src="app.js?v=0.8.2"></script>
+<script src="app.js?v=1.0.0"></script>
 </body>
 </html>
